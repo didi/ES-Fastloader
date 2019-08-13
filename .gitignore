@@ -1,0 +1,11 @@
+# Created by .ignore support plugin (hsz.mobi)
+.idea
+metastore_db
+mr2es.iml
+target
+derby.log
+.DS_Store
+*/.DS_Store
+bin/
+.project
+.settings

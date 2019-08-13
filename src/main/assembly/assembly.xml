@@ -1,0 +1,29 @@
+<assembly>
+    <id>with-dependencies</id>
+    <formats>
+        <format>jar</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <dependencySets>
+        <dependencySet>
+            <useProjectArtifact>true</useProjectArtifact>
+            <outputDirectory>/</outputDirectory>
+            <useTransitiveDependencies>false</useTransitiveDependencies>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+            <unpack>true</unpack>
+        </dependencySet>
+    </dependencySets>
+    <fileSets>
+        <fileSet>
+            <directory>src/main/resources</directory>
+            <outputDirectory>/</outputDirectory>
+            <excludes>
+                <exclude>log4j.properties</exclude>
+                <exclude>Readme</exclude>
+                <exclude>*xml</exclude>
+            </excludes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+    </fileSets>
+</assembly>
