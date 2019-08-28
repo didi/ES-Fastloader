@@ -1,4 +1,5 @@
 # Introduction
+# <img src="imgs/logo.png" width="250px" align="center" alt="ES-Fastloader"/>
 The ES-Fastloader uses the fault tolerance and parallelism of Hadoop and builds individual ElasticSearch shards in multiple reducer nodes, then transfers shards to ElasticSearch cluster for serving. The loader will create a Hadoop job to read data from data files in HDFS, repartitions it on a per-node basis, and finally writes the generated indices to ES shards. In DiDi we have been using ES-Fastloader to create large-scale ElasticSearch indices from TB/PB level sequence files in Hive. 
 
 # Features
