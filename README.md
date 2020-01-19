@@ -10,16 +10,6 @@ The ES-Fastloader uses the fault tolerance and parallelism of Hadoop and builds 
 * JDK: 8 or greater
 * ElasticSearch: 6.6.X or greater
 
-# Deployment
-## Configure
-Edit client.properties
-## Build
-mvn clean package -Dmaven.test.skip=true -Ppro
-## Launch --run in hadoop cluster
-sh mr2es.sh project-name, e.g., sh mr2es.sh bigpassenger
-## Load data
-Refer to [here](src/main/java/com/didi/bigdata/mr2es/esCode)
-
 # Developer guide
 * API document [wiki](https://github.com/didi/ES-Fastloader/wiki)
 * Read [core library source code](https://github.com/didi/ES-Fastloader/tree/1.0.0)
