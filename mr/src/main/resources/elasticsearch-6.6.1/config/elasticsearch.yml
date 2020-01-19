@@ -1,0 +1,20 @@
+cluster.name: ${CLUSTERNAME}
+node.name: ${HOSTNAME}
+node.master: false
+node.data: true
+path.data: /data1/es
+http.enabled: false
+network.host: 0.0.0.0
+discovery.zen.ping.unicast.hosts: [ ${MASTERNODES} ]
+discovery.zen.minimum_master_nodes: 2
+gateway.recover_after_nodes: 2
+node.max_local_storage_nodes: 1
+indices.memory.index_buffer_size: 20%
+indices.queries.cache.size: 30%
+cluster.routing.allocation.same_shard.host: true
+processors: 16
+thread_pool.search.size: 12
+thread_pool.search.queue_size: 1000
+thread_pool.write.size: 12
+thread_pool.write.queue_size: 1000
+http.compression: true
