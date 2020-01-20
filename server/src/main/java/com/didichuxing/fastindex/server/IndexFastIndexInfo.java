@@ -8,13 +8,13 @@ import lombok.Data;
 @Data
 public class IndexFastIndexInfo {
     private IndexConfig indexConfig;
-    private long shardNum;
+    private long reduceNum;
     private String transformType;
     private long expanfactor;
 
     public JSONObject toJson() {
         JSONObject obj = new JSONObject();
-        obj.put("shardNum", shardNum);
+        obj.put("reduceNum", reduceNum);
         obj.put("indexConfig", indexConfig.toJson());
         obj.put("transformType", transformType);
         obj.put("expanfactor", expanfactor);

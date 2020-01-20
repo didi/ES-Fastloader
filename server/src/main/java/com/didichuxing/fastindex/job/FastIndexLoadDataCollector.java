@@ -157,7 +157,7 @@ public class FastIndexLoadDataCollector {
                 }
             }
 
-            String hdfsShards = po.getHdfsShards();
+            String hdfsShards = po.getRedcueIds();
             int num = hdfsShards.split(",").length;
             for (int i = 0; i < num; i++) {
                 for (String tag : shardSuccessTags) {
@@ -194,7 +194,7 @@ public class FastIndexLoadDataCollector {
             params.add(po.getIndexUUID());
             params.add("" + po.getShardNum());
             params.add(FastIndexService.getWorkDir(po.getIndexName(), po.getShardNum()));
-            params.add(po.getHdfsShards());
+            params.add(po.getRedcueIds());
             params.add("_uid");     // 固定使用es内部的_uid;
             params.add(po.getHdfsUser());
             params.add(po.getHdfsPassword());

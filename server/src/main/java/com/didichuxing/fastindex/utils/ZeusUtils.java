@@ -14,6 +14,15 @@ public class ZeusUtils {
     private static final String TASK_STR = "{ \"tpl_id\":%d, \"account\":\"%s\", \"hosts\": [ \"%s\" ], " +
             "\"batch\":1, \"tolerance\":0, \"pause\":\"\", \"timeout\":%d, \"args\":\"%s\", \"action\":\"start\" }";
 
+    /*
+     * 在对应主机上执执行对应shell脚本
+     * shell脚本在当前项目的resource目录下：shell/loadData.sh
+     * @tplID 脚本id
+     * @user 执行脚本的用户名
+     * @host 执行脚本的主键名
+     * @timeout 执行超时时间
+     * @args 脚本的参数，具体见脚本文件
+     */
     private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=xxxx";
     public static long startTask(long tplID, String user, String host, long timeout, List<String> args) throws Exception {
         String argsStr = StringUtils.join(args, ",,");
@@ -24,6 +33,10 @@ public class ZeusUtils {
         return Long.valueOf(getData(resp));
     }
 
+    /*
+     * 脚本完成之后，获得脚本的输出，用于校验是否有异常
+     * @param taskId 脚本单次执行的id，由startTask返回
+     */
     private static final String GET_STDOUT_URL_FORMAT = "http://zeus.intra.xiaojukeji.com/api/task/%d/stdouts.json";
     public static String getStdOut(long taskId) throws Exception {
         String url = String.format(GET_STDOUT_URL_FORMAT, taskId);
@@ -32,6 +45,10 @@ public class ZeusUtils {
         return getData(resp);
     }
 
+    /*
+     * 判断脚本是否执行完成
+     * @param taskId 脚本单次执行的id，由startTask返回
+     */
     private static final String GET_STATE_URL_FORMAT = "http://zeus.intra.xiaojukeji.com/api/task/%d/state";
     public static boolean isDone(long taskId) {
         try {

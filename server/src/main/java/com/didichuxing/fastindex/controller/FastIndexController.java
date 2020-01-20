@@ -8,14 +8,12 @@ import com.didichuxing.fastindex.server.IndexFastIndexInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-
-
 @RestController()
 @RequestMapping("/fastindex")
 public class FastIndexController {
     private static final String TEMPLATE_STR    = "template";
     private static final String TIME_STR        = "time";
-    private static final String SHARD_NUM_STR   = "shardNum";
+    private static final String REDUCE_ID_STR   = "reduceId";
     private static final String MAPPING_STR     = "mapping";
     private static final String METRIC_STR      = "metric";
     private static final String SRC_TAG_STR     =  "srcTag";
@@ -26,10 +24,9 @@ public class FastIndexController {
     @RequestMapping(path = "/getIndexInfo.do", method = RequestMethod.GET)
     public Result<JSONObject> getIndexInfo(@RequestParam(value = "template", required=true) String template,
                                            @RequestParam(value = "time", required=true) long time,
-                                           @RequestParam(value = "highES", required=false, defaultValue="false") boolean highES,
                                            @RequestParam(value = "hdfsSize", required=false, defaultValue="-1") long hdfsSize) {
         try {
-            IndexFastIndexInfo info = fastIndexService.getIndexConfig(template, time, highES, hdfsSize);
+            IndexFastIndexInfo info = fastIndexService.getIndexConfig(template, time, hdfsSize);
             return new Result<>(info.toJson());
         } catch (Throwable t) {
             return new Result<>(ResultType.FAIL, t.getMessage());
@@ -58,11 +55,11 @@ public class FastIndexController {
         try {
             String template = param.getString(TEMPLATE_STR);
             long time = Long.valueOf(param.getString(TIME_STR));
-            long shardNum = Long.valueOf(param.getString(SHARD_NUM_STR));
+            long reduceId = Long.valueOf(param.getString(REDUCE_ID_STR));
             JSONObject mapping = param.getJSONObject(MAPPING_STR);
             String srcTag = param.getString(SRC_TAG_STR);
 
-            fastIndexService.sumitMapping(srcTag, template, time, shardNum, mapping);
+            fastIndexService.sumitMapping(srcTag, template, time, reduceId, mapping);
 
             return new Result<>(ResultType.SUCCESS);
         } catch (Throwable t) {
@@ -80,11 +77,11 @@ public class FastIndexController {
         try {
             String template = param.getString(TEMPLATE_STR);
             long time = Long.valueOf(param.getString(TIME_STR));
-            long shardNum = Long.valueOf(param.getString(SHARD_NUM_STR));
+            long reduceId = Long.valueOf(param.getString(REDUCE_ID_STR));
             String srcTag = param.getString(SRC_TAG_STR);
             JSONObject metric = param.getJSONObject(METRIC_STR);
 
-            fastIndexService.submitMetric(srcTag, template, time, shardNum, metric);
+            fastIndexService.submitMetric(srcTag, template, time, reduceId, metric);
 
             return new Result<>(ResultType.SUCCESS);
         } catch (Throwable t) {

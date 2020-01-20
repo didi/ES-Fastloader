@@ -36,7 +36,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
     private TaskConfig taskConfig;
     private IndexInfo indexInfo;
 
-    private int shardNo = -1;
+    private int reduceId = -1;
 
     private ESNode esNode;
     private ESClient esClient;
@@ -52,8 +52,8 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
 
             // 获得当前reducer编号
-            this.shardNo = context.getTaskAttemptID().getTaskID().getId();
-            LogUtils.info("sharNo:" + shardNo);
+            this.reduceId = context.getTaskAttemptID().getTaskID().getId();
+            LogUtils.info("reduceNo:" + reduceId);
 
             // 启动es进程
             esNode = new ESNode(taskConfig, indexInfo);
@@ -73,9 +73,9 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
     /* 处理Hive数据 */
     @Override
     protected void reduce(IntWritable key, Iterable<DefaultHCatRecord> values, Context context) throws IOException, InterruptedException {
-        this.shardNo = key.get();
+        this.reduceId = key.get();
 
-        LogUtils.info("reduce start, es shardNo is:" + shardNo);
+        LogUtils.info("reduce start, es reduceNo is:" + reduceId);
         Iterator<DefaultHCatRecord> records = values.iterator();
 
 
@@ -127,7 +127,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             mappingJson = MappingUtils.diffMapping(new IndexConfig(indexInfo.getSetting()), mappingJson, esClient.type);
             if (mappingJson != null) {
                 LogUtils.info("diff mapping:" + mappingJson.toJSONString());
-                RemoteService.submitMapping(taskConfig.getEsTemplate(), taskConfig.getTime(), shardNo, mappingJson);
+                RemoteService.submitMapping(taskConfig.getEsTemplate(), taskConfig.getTime(), reduceId, mappingJson);
             }
 
             // 4 由于es内部可能存在merge操作,导致文件变动,所以先close掉node, 再去copy文件
@@ -141,7 +141,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             local2Hdfs(context, tarFile);
 
             // 7 提交metric信息
-            RemoteService.submitMetric(taskConfig.getEsTemplate(), taskConfig.getTime(), shardNo, esClient.getTaskMetrics());
+            RemoteService.submitMetric(taskConfig.getEsTemplate(), taskConfig.getTime(), reduceId, esClient.getTaskMetrics());
         } catch (Throwable t) {
             LogUtils.error("clean up error, msg:" + t.getMessage(), t);
             System.exit(-1);
@@ -152,7 +152,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
 
     /* 将本地文件提交到hdfs上 */
     private void local2Hdfs(Context context, String tarFile) throws Exception {
-        String hdfsDir = taskConfig.getHdfsESOutputPath() + "/" + shardNo;
+        String hdfsDir = taskConfig.getHdfsESOutputPath() + "/" + reduceId;
         LogUtils.info("local2hdfs start, tarFile:" + tarFile + ", hdfsDir:" + hdfsDir);
 
         int tryCount = 5;

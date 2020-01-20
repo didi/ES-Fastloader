@@ -32,7 +32,7 @@ public class FastIndexTaskMetricDao extends BaseEsDao {
         String dslFormat = "{\n" +
                 "  \"sort\": [\n" +
                 "    {\n" +
-                "      \"shardNum\": {\n" +
+                "      \"reduceId\": {\n" +
                 "        \"order\": \"asc\"\n" +
                 "      }\n" +
                 "    }\n" +

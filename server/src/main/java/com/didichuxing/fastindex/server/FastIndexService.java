@@ -44,17 +44,25 @@ public class FastIndexService {
     @Autowired
     private IndexOpDao indexOpDao;
 
-    public IndexFastIndexInfo getIndexConfig(String template, long time, boolean highES, long hdfsSize) throws Exception {
+    /*
+     * 获得索引的配置信息
+     * @param template 模板名
+     * @param time  时间分区
+     * @param hdfsSize hive数据大小，用于确定expandFactor
+     *
+     */
+    public IndexFastIndexInfo getIndexConfig(String template, long time, long hdfsSize) throws Exception {
         String indexName = getIndexName(template, time);
 
         // 获得索引配置
         IndexConfig indexConfig = getIndexConfig(indexName);
+
         // 如果索引不存在，则创建索引
-        if(indexConfig==null) {
+        if (indexConfig == null) {
             indexOpDao.createNewIndex(indexName);
 
             indexConfig = getIndexConfig(indexName);
-            if(indexConfig==null) {
+            if (indexConfig == null) {
                 throw new Exception("create index fail, index:" + indexName);
             }
         }
@@ -65,20 +73,18 @@ public class FastIndexService {
 
         settings.put("index.number_of_shards", "1");
         settings.put("index.number_of_replicas", "0");
-        settings.remove("index.routing.allocation.include.rack");
         settings.put("index.refresh_interval", "-1");
         settings.put("index.merge.scheduler.max_thread_count", "1");
 
-        if(highES) {
-            settings.remove("index.blocks.write");
-            settings.remove("index.creation_date");
-            settings.remove("index.provided_name");
-            settings.remove("index.uuid");
-            settings.remove("index.version.created");
-            settings.remove("index.group.factor");
-            settings.remove("index.group.name");
-            settings.remove("index.template");
-        }
+        settings.remove("index.routing.allocation.include.rack");
+        settings.remove("index.blocks.write");
+        settings.remove("index.creation_date");
+        settings.remove("index.provided_name");
+        settings.remove("index.uuid");
+        settings.remove("index.version.created");
+        settings.remove("index.group.factor");
+        settings.remove("index.group.name");
+        settings.remove("index.template");
 
         indexConfig.setSettings(settings);
 
@@ -86,16 +92,16 @@ public class FastIndexService {
 
         IndexFastIndexInfo indexFastIndexInfo = new IndexFastIndexInfo();
         indexFastIndexInfo.setIndexConfig(indexConfig);
-        indexFastIndexInfo.setShardNum(shardNum*expanFactor);
+        indexFastIndexInfo.setReduceNum(shardNum * expanFactor);
         indexFastIndexInfo.setExpanfactor(expanFactor);
 
         // 使用特殊配置
         FastIndexTemplateConfigPo templateConfigPo = fastIndexTemplateConfigDao.getByName(template);
-        if(templateConfigPo != null) {
+        if (templateConfigPo != null) {
             indexFastIndexInfo.setTransformType(templateConfigPo.getTransformType());
-            if(templateConfigPo.getExpanfactor()>0) {
+            if (templateConfigPo.getExpanfactor() > 0) {
                 indexFastIndexInfo.setExpanfactor(templateConfigPo.getExpanfactor());
-                indexFastIndexInfo.setShardNum(shardNum * templateConfigPo.getExpanfactor());
+                indexFastIndexInfo.setReduceNum(shardNum * templateConfigPo.getExpanfactor());
             }
         }
 
@@ -105,7 +111,14 @@ public class FastIndexService {
     }
 
     /*
-     * hdfsDir:/user/fe/data/es_fastload/bigPassenger/2019/04/24/es
+     * 触发数据加载任务
+     * @param tempalte 模板名
+     * @param time 时间分区
+     * @param hdfsDir 存放lucene文件的hdfs路径
+     * @param expanFactor getIndexConfig返回给mr任务
+     * @param hdfsUser hdfs用户名
+     * @param hdfsPasswd hdfs密码
+     * @param srcTag
      */
     public void startLoadData(String template, long time, String hdfsDir, int expanFactor, String hdfsUser, String hdfsPasswd, String srcTag) throws Exception {
         String indexName = getIndexName(template, time);
@@ -140,16 +153,16 @@ public class FastIndexService {
         // 计算hdfsShard和ESShard的映射关系
         Map<Long/*esShard*/, List<Integer/*hdfsShard*/>> shardMap = new HashMap<>();
         int esShardNum = resp.getShards().size();
-        int hdfsShardNum = expanFactor * esShardNum;
+        int reduceNum = expanFactor * esShardNum;
 
-        for (int hdfsShard = 0; hdfsShard < hdfsShardNum; hdfsShard++) {
-            long esShard = hdfsShard % esShardNum;
+        for (int reduceId = 0; reduceId < reduceNum; reduceId++) {
+            long esShard = reduceId% esShardNum;
 
             if (!shardMap.containsKey(esShard)) {
                 shardMap.put(esShard, new ArrayList<>());
             }
 
-            shardMap.get(esShard).add(hdfsShard);
+            shardMap.get(esShard).add(reduceId);
         }
 
         // 获得缩影uuid
@@ -166,6 +179,7 @@ public class FastIndexService {
             }
         }
 
+        // 构建各个shard的数据加载任务
         for (List<ESShard> les : resp.getShards()) {
             for (ESShard es : les) {
                 FastIndexLoadDataPo fastIndexLoadDataPo = new FastIndexLoadDataPo();
@@ -179,7 +193,7 @@ public class FastIndexService {
                 // 默认9200端口
                 fastIndexLoadDataPo.setPort(9200);
                 fastIndexLoadDataPo.setHostName(nodeMap.get(es.getNode()).getName());
-                fastIndexLoadDataPo.setHdfsShards(StringUtils.join(shardMap.get(es.getShard()), ","));
+                fastIndexLoadDataPo.setRedcueIds(StringUtils.join(shardMap.get(es.getShard()), ","));
                 fastIndexLoadDataPo.setHdfsUser(hdfsUser);
                 fastIndexLoadDataPo.setHdfsPassword(hdfsPasswd);
                 fastIndexLoadDataPo.setHdfsSrcDir(getHdfsPath(hdfsDir));
@@ -194,12 +208,20 @@ public class FastIndexService {
         indexOpDao.updateSetting(indexName, "blocks.write", "true");
 
         // 写入任务数据，会有定时任务job执行各个任务
+        // 对应的job任务是com.didichuxing.fastindex.job.FastIndexLoadDataCollector
         fastIndexLoadDataDao.batchInsert(fastIndexLoadDataPos);
     }
 
 
-    // 各个reducer任务提交统计信息
-    public void submitMetric(String srcTag, String template, long time, long shardNum, JSONObject metric) throws Exception {
+    /*
+     * 各个reducer任务提交统计信息
+     * @param srcTag
+     * @param template 模板名
+     * @param time 分区时间
+     * @param shardNum reduce编号
+     * @param metric metric信息
+     */
+    public void submitMetric(String srcTag, String template, long time, long reduceId, JSONObject metric) throws Exception {
         String indexName = getIndexName(template, time);
 
         List<FastIndexTaskMetricPo> pos = new ArrayList<>();
@@ -207,14 +229,19 @@ public class FastIndexService {
         po.setSrcTag(srcTag);
         po.setIndexName(indexName);
         po.setAddTime(System.currentTimeMillis());
-        po.setShardNum(shardNum);
+        po.setReduceId(reduceId);
         po.setMetrics(metric);
         pos.add(po);
 
         fastIndexTaskMetricDao.batchInsert(pos);
     }
 
-    // mr结束的时候，获得整个任务的统计信息
+    /*
+     * mr结束的时候，获得整个任务的统计信息
+     * @param srcTag
+     * @param template 模板名
+     * @param time 时间分区
+     */
     public JSONObject getAllMetrics(String srcTag, String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
 
@@ -222,15 +249,22 @@ public class FastIndexService {
         JSONObject ret = new JSONObject();
         for(FastIndexTaskMetricPo po : pos) {
             if(equalTag(srcTag, po.getSrcTag())) {
-                ret.put(po.getShardNum()+"", po.getMetrics());
+                ret.put(po.getReduceId()+"", po.getMetrics());
             }
         }
 
         return ret;
     }
 
-    // 各个reducer任务提交mapping
-    public void sumitMapping(String srcTag, String template, long time, long shardNum, JSONObject mapping) throws Exception {
+    /*
+     * 各个reducer任务提交mapping
+     * @param srcTag
+     * @param template 模板名
+     * @param time 分区时间
+     * @param shardNum reduce编号
+     * @param mapping 提交的mapping数据
+     */
+    public void sumitMapping(String srcTag, String template, long time, long reduceId, JSONObject mapping) throws Exception {
         String indexName = getIndexName(template, time);
 
         List<FastIndexMappingPo> pos = new ArrayList<>();
@@ -238,14 +272,19 @@ public class FastIndexService {
         po.setSrcTag(srcTag);
         po.setIndexName(indexName);
         po.setAddTime(System.currentTimeMillis());
-        po.setShardNum(shardNum);
+        po.setReduceId(reduceId);
         po.setMapping(JSON.toJSONString(mapping));
         pos.add(po);
 
         fastIndexMappingEsDao.batchInsert(pos);
     }
 
-    // 合并reducer提交的mapping
+    /*
+     * 合并reducer提交的mapping
+     * @param srcTag
+     * @param template 模板名
+     * @param time 时间分区
+     */
     public MappingConfig mergeMapping(String srcTag, String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
 
@@ -268,13 +307,13 @@ public class FastIndexService {
 
                     if (!tdm.containsKey(key)) {
                         tdm.put(key, td);
-                        sm.put(key, po.getShardNum());
+                        sm.put(key, po.getReduceId());
                     } else {
 
                         if (!tdm.get(key).equals(td)) {
                             throw new Exception("field not match, index:" + indexName +
-                                    ", shard1:" + po.getShardNum() +
-                                    ", shard2:" + sm.get(key) +
+                                    ", reduce1:" + po.getReduceId() +
+                                    ", reduce2:" + sm.get(key) +
                                     ", type:" + type +
                                     ", field:" + field);
                         }
@@ -297,6 +336,12 @@ public class FastIndexService {
         return mappingConfig;
     }
 
+    /*
+     * 移除所有结束标记
+     * @param srcTag
+     * @param template 模板名
+     * @param time 分区时间
+     */
     public void removeFinishTag(String srcTag, String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
 
@@ -312,11 +357,23 @@ public class FastIndexService {
         fastIndexOpIndexDao.delete(key);
     }
 
+    /*
+     * 判断加载任务是否完成
+     * @param srcTag
+     * @param template 模板名
+     * @param time 分区时间
+     */
     public boolean isFinish(String srcTag, String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
         return isFinish(srcTag, indexName);
     }
 
+    /*
+     * 判断加载任务是否完成
+     * @param srcTag
+     * @param template 模板名
+     * @param time 分区时间
+     */
     private boolean isFinish(String srcTag, String indexName) {
         List<FastIndexOpIndexPo> list = fastIndexOpIndexDao.getFinishedByIndexName(indexName);
         if(list==null || list.size()==0) {
@@ -336,6 +393,7 @@ public class FastIndexService {
         return false;
     }
 
+    /* 去除路径末尾的/ */
     private String getHdfsPath(String rootPath) {
         if(rootPath.endsWith("/")) {
             rootPath = rootPath.substring(0, rootPath.length()-1);
@@ -344,22 +402,26 @@ public class FastIndexService {
         return rootPath;
     }
 
+    /* 获得shard对应点存放路径 */
     private static final String ES_PATH_FORMAT_661 = "/data1/es/nodes/0/indices/%s/%d";
     private String getEsPathFor661(String uuid, long shardId) {
         return String.format(ES_PATH_FORMAT_661, uuid, shardId);
     }
 
+    /* 获得数据加载脚本的工作路径 */
     private static final String WORK_DIR_FORMAT = "/data1/es/fastIndex/%s_shard%d";
     public static String getWorkDir(String index, long shardNum) {
         return String.format(WORK_DIR_FORMAT, index, shardNum);
     }
 
+    /* 获得索引名 */
     private static final String DATE_FORMAT = "_yyyy-MM-dd";
     private String getIndexName(String template, long time) {
         SimpleDateFormat sdf = new SimpleDateFormat(template+DATE_FORMAT);
         return sdf.format(time);
     }
 
+    /* 获得索引配置 */
     private IndexConfig getIndexConfig(String indexName) throws Exception {
         Map<String, IndexConfig> m = indexOpDao.getSetting(indexName);
         if(m==null) {
@@ -376,7 +438,7 @@ public class FastIndexService {
         return indexConfig;
     }
 
-
+    /* 对比srcTag */
     private boolean equalTag(String tag1, String tag2) {
         if (tag1 == null) {
             if (tag2 == null) {
@@ -389,6 +451,7 @@ public class FastIndexService {
         }
     }
 
+    /* 确定expan factor */
     public static int EXPANFACTOR = 20;
     public int decideExpanFactor(long shardNum, long hdfsSize) {
         if(hdfsSize<=0) {

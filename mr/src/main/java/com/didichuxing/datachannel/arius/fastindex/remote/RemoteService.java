@@ -51,7 +51,6 @@ public class RemoteService {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
-        param.put("highES", true);
         param.put("hdfsSize", hdfsSize);
 
 
@@ -78,7 +77,6 @@ public class RemoteService {
         param.put("time", time);
         param.put("hdfsDir", hdfsDir);
         param.put("expanFactor", expanfactor);
-        param.put("highES", true);
         param.put("hdfsUser", user);
         param.put("hdfsPasswd", passwd);
         param.put("srcTag", SRC_TAG);
@@ -95,11 +93,11 @@ public class RemoteService {
      * 对应代码，server模块中的com.didichuxing.fastindex.controller.submitMapping()函数
      */
     private static final String SUBMIT_MAPPING_PATH = "fastindex/submitMapping.do";
-    public static void submitMapping(String template, long time, int shardNum, JSONObject mapping) {
+    public static void submitMapping(String template, long time, int reduceId, JSONObject mapping) {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
-        param.put("shardNum", shardNum);
+        param.put("reduceId", reduceId);
         param.put("mapping", mapping);
         param.put("srcTag", SRC_TAG);
 
@@ -113,12 +111,12 @@ public class RemoteService {
      * 对应代码，server模块中的com.didichuxing.fastindex.controller.submitMetric()函数
      */
     private static final String SUBMIT_METRIC_PATH = "fastindex/submitMetric.do";
-    public static void submitMetric(String template, long time, int shardNum, TaskMetrics metric) {
+    public static void submitMetric(String template, long time, int reduceId, TaskMetrics metric) {
         LogUtils.info("submit metric " + JSON.toJSONString(metric));
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
-        param.put("shardNum", shardNum);
+        param.put("reduceId", reduceId);
         param.put("srcTag", SRC_TAG);
         param.put("metric", JSONObject.parseObject(JSON.toJSONString(metric)));
 

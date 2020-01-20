@@ -5,17 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+/* 对应一个索引的数据加载任务 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class FastIndexOpIndexPo extends BasePo {
     private String srcTag;
+    private String templateName;    // 索引名
+    private String indexName;       // 模板名
 
-    private String templateName;
-    private String indexName;
-
-    private boolean isFinish;
-    private long finishTime;
+    private boolean isFinish;       // 是否已经完成
+    private long finishTime;        // 完成时间
 
     @Override
     public String getKey() {

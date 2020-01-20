@@ -9,21 +9,16 @@ import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 
 
+/* 对应单个reducer任务产生的mapping */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class FastIndexMappingPo extends BasePo {
-
     private String srcTag;
-
-    private String indexName;
-
-    private long shardNum;
-
-    private String mappingMd5;
-
-    private long addTime;
-
+    private String indexName;   // 索引名
+    private long reduceId;      // reduce编号
+    private String mappingMd5;  // mapping数据
+    private long addTime;       // 提交时间
 
     @JSONField(serialize = false)
     public void setMapping(String mapping) throws UnsupportedEncodingException {
@@ -38,9 +33,9 @@ public class FastIndexMappingPo extends BasePo {
     @Override
     public String getKey() {
         if(srcTag==null || srcTag.trim().length()==0) {
-            return indexName + "_" + shardNum;
+            return indexName + "_" + reduceId;
         } else {
-            return srcTag.trim() + "_" + indexName + "_" + shardNum;
+            return srcTag.trim() + "_" + indexName + "_" + reduceId;
         }
     }
 }

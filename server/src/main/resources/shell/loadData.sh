@@ -2,12 +2,19 @@
 
 set -x
 
+#lucene存放的hdfs路径
 hdfsDir=$1
+#索引名
 indexName=$2
+#索引UUID
 uuid=$3
+#索引shard
 indexShard=$4
+#脚本的工作目录
 workDir=$5
-hdfsShards=$6
+#对应的hdfs reduce编号
+reduceNums=$6
+#主键名
 primeKey=$7
 
 
@@ -36,7 +43,7 @@ cd $workDir
 index=0
 
 IFS=,
-for shard in $hdfsShards
+for reduceNum in $reduceNums
 do
 
 shardWorkDir=$workDir/shard$index
@@ -47,11 +54,11 @@ shardTarFile=$shardWorkDir"/data.tar"
 
 #下载压缩包
 status="fail"
-hadoop fs -get $hdfsDir/$shard/*.tar $shardTarFile && status="ok"
+hadoop fs -get $hdfsDir/$reduceNum/*.tar $shardTarFile && status="ok"
 if [ "$status" == "ok" ];then
         echo "loadhdfsOK$index"
 else
-        echo "loadhdfs fail, hdfsShard:$shard"
+        echo "loadhdfs fail, hdfsShard:$reduceNum"
         rm -rf $workDir
         exit 1
 fi
@@ -65,7 +72,7 @@ tar xvf $shardTarFile 1>&2 && status="ok"
 if [ "$status" == "ok" ];then
         echo "tarOK$index"
 else
-        echo "tar fail, hdfsShard:$shard"
+        echo "tar fail, hdfsShard:$reduceNum"
         rm -rf $workDir
         exit 1
 fi
@@ -80,7 +87,7 @@ mv  $shardWorkDir/*/*/nodes/0/indices/*/0/index $shardWorkDir/index && status="o
 if [ "$status" == "ok" ];then
         echo "mvindexOK$index"
 else
-        echo "mv index fail, hdfsShard:$shard"
+        echo "mv index fail, hdfsShard:$reduceNum"
         rm -rf $workDir
         exit 1
 fi

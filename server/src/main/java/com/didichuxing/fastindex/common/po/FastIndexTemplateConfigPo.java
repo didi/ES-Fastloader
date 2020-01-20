@@ -4,16 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
+/* 针对模板的特殊配置 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class FastIndexTemplateConfigPo extends BasePo {
-    private String name;
-
-    private int expanfactor = -1;
-
-    private String transformType = "normal";
+    private String name;                        // 模板名
+    private int expanfactor = -1;               // redcuer任务数目=shardNum*expanfactor
+    private String transformType = "normal";    // 数据转化逻辑
 
     @Override
     public String getKey() {
