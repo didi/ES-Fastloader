@@ -28,7 +28,6 @@ import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.engine.InternalEngine;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
@@ -40,6 +39,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 
+/* 负责将制定目录的lucene文件加载到制定的shard中 */
 public class AppendLuceneTransportAction extends TransportAction<AppendLuceneRequest, AppendLuceneResponse> {
 
     private ThreadPool threadPool;
@@ -67,24 +67,29 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
 
     private void doExecuteCore(AppendLuceneRequest request, ActionListener<AppendLuceneResponse> listener) {
         try {
+            // 对请求做check
             request.check();
 
+            // 获得shard信息
             ShardId shardId = new ShardId(request.indexName, request.uuid, request.shardId);
             IndexShard shard = indicesService.getShardOrNull(shardId);
             if(shard==null) {
                 throw new Exception("shard not found, indexName:" + request.indexName + ", shardId:" + request.shardId);
             }
 
+            // 获得lucene的IndexWriter对象
             /* FIXME 这里需要修改es的代码, 将lucene的IndexWriter对象暴露给plugin使用  */
             InternalEngine engine = (InternalEngine) shard.getEngineOrNull();
             IndexWriter indexWriter = engine.getIndexWriter();
 
+            // 处理主键冲突情况
             long deleteCount = -1;
             List<String> appendDirs = request.getAppendDirs();
             if(request.primeKey!=null && request.primeKey.length()>0) {
                 deleteCount = doPrimerKey(appendDirs, indexWriter, request.primeKey);
             }
 
+            // 将新的lucene文件加入到shard中
             Directory[] indexes = new Directory[appendDirs.size()];
             for(int i=0; i<appendDirs.size(); i++) {
                 indexes[i] = FSDirectory.open(Paths.get(appendDirs.get(i)));
@@ -92,6 +97,7 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
             indexWriter.addIndexes(indexes);
             indexWriter.commit();
 
+            // 构建response
             AppendLuceneResponse response = new AppendLuceneResponse();
             response.deleteCount = deleteCount;
             listener.onResponse(response);
@@ -101,6 +107,10 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
     }
 
 
+    /*
+     * 对比新加的lucene文件和现有shard数据是否有主键冲突的情况
+     * 如果存在冲突，则删除shard数据中对应的主键数据
+     */
     public long doPrimerKey(List<String> dirs, IndexWriter dstIndexWriter, String primeKey) throws IOException {
         if (dstIndexWriter.numDocs() == 0) {
             return -1;
@@ -120,7 +130,7 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
                 srcReader = (StandardDirectoryReader) DirectoryReader.open(srcIndexWriter);
                 dstReader = (StandardDirectoryReader) DirectoryReader.open(dstIndexWriter);
 
-
+                // 遍历src中各个segment
                 for (LeafReaderContext srcLeafReaderContext : srcReader.leaves()) {
                     LeafReader srcLeafReader = srcLeafReaderContext.reader();
 
@@ -130,13 +140,15 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
                     }
                     TermsEnum srcTermsEnum = srcTerms.iterator();
 
+                    // 遍历单个segment中各个主键
                     while (srcTermsEnum.next() != null) {
                         Term srcTerm = new Term(primeKey, srcTermsEnum.term());
 
-                        // 判断dst中是否存在
+                        // 判断dst中是否存在相同的主键
                         for (LeafReaderContext dstleafReaderContext : dstReader.leaves()) {
                             LeafReader dstLeafReader = dstleafReaderContext.reader();
                             if (dstLeafReader.postings(srcTerm) != null) {
+                                // 如果碰到相同主键，则删除dst中对应的主键
                                 dstIndexWriter.deleteDocuments(srcTerm);
                                 count++;
                                 break;

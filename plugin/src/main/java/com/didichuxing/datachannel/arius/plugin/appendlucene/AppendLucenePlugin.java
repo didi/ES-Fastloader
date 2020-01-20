@@ -17,6 +17,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
+/*
+ * plugin入口函数
+ */
 public class AppendLucenePlugin extends Plugin implements ActionPlugin {
 
     @Override
@@ -32,6 +35,7 @@ public class AppendLucenePlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
+        // 增加一个http接口
         return Arrays.asList(new ActionHandler<>(AppendLuceneAction.INSTANCE, AppendLuceneTransportAction.class));
     }
 }

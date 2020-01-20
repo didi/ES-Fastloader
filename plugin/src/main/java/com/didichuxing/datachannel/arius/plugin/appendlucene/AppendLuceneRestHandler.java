@@ -8,6 +8,7 @@ import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.RestBuilderListener;
 
 
+/* 增加http接口，调用方式 curl "127.0.0.1:9200/lucene/append?indexName=$indexName&uuid=$uuid&shardId=$indexShard&append=$dir&primeKey=$primeKey" */
 public class AppendLuceneRestHandler extends BaseRestHandler {
 
     public AppendLuceneRestHandler(Settings settings, RestController restController) {
@@ -38,7 +39,7 @@ public class AppendLuceneRestHandler extends BaseRestHandler {
         appendLuceneRequest.appendSegmentDirs = request.param(APPEND);
         appendLuceneRequest.primeKey = request.param(PRIMERKEY);
 
-
+        // 跳转到AppendLuceneTransportAction.doExecute()
         return channel -> client.executeLocally(AppendLuceneAction.INSTANCE, appendLuceneRequest, new RestBuilderListener<AppendLuceneResponse>(channel) {
             @Override
             public RestResponse buildResponse(AppendLuceneResponse appendLuceneResponse, XContentBuilder builder) throws Exception {
