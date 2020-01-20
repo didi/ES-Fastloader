@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import java.util.*;
 
+/* 表示mapping信息 */
 public class MappingConfig {
     private Map<String, TypeConfig> mapping = new HashMap<>();
 

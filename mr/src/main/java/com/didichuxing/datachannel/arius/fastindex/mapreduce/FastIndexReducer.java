@@ -51,9 +51,11 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             indexInfo = IndexInfo.getIndexInfo(context);
             RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
 
+            // 获得当前reducer编号
             this.shardNo = context.getTaskAttemptID().getTaskID().getId();
             LogUtils.info("sharNo:" + shardNo);
 
+            // 启动es进程
             esNode = new ESNode(taskConfig, indexInfo);
             esNode.init(context);
             esClient = esNode.getEsClient();
@@ -68,6 +70,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
         }
     }
 
+    /* 处理Hive数据 */
     @Override
     protected void reduce(IntWritable key, Iterable<DefaultHCatRecord> values, Context context) throws IOException, InterruptedException {
         this.shardNo = key.get();
@@ -127,8 +130,6 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
                 RemoteService.submitMapping(taskConfig.getEsTemplate(), taskConfig.getTime(), shardNo, mappingJson);
             }
 
-            esClient.getSetting();
-
             // 4 由于es内部可能存在merge操作,导致文件变动,所以先close掉node, 再去copy文件
             esNode.stop();
 
@@ -139,6 +140,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             // 6 上传压缩文件到hdfs
             local2Hdfs(context, tarFile);
 
+            // 7 提交metric信息
             RemoteService.submitMetric(taskConfig.getEsTemplate(), taskConfig.getTime(), shardNo, esClient.getTaskMetrics());
         } catch (Throwable t) {
             LogUtils.error("clean up error, msg:" + t.getMessage(), t);
@@ -148,6 +150,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
         LogUtils.info("clean up finish");
     }
 
+    /* 将本地文件提交到hdfs上 */
     private void local2Hdfs(Context context, String tarFile) throws Exception {
         String hdfsDir = taskConfig.getHdfsESOutputPath() + "/" + shardNo;
         LogUtils.info("local2hdfs start, tarFile:" + tarFile + ", hdfsDir:" + hdfsDir);

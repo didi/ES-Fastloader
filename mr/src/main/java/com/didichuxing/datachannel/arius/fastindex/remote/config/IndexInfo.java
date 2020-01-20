@@ -16,27 +16,25 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/*
+ * 索引配置信息，由server返回
+ */
 @Data
 public class IndexInfo {
     private static final TypeDefine OBJECT_TYPE = new TypeDefine(JSON.parseObject("{\"type\":\"object\"}"));
     public static final String TEMPLATE_CONFIG = "indexConfig";
 
-    private int shardNum;
-
     @JSONField(name = "indexConfig")
-    private JSONObject setting;
-
-    private String transformType;
-
-    private long expanfactor;
-
-    private String type;
+    private JSONObject setting;         // 索引的setting和mapping配置
+    private int reduceNum;              // reduce任务个数
+    private String transformType;       // 数据转化逻辑，默认是normal
+    private long expanfactor;           // reducerNum/shardNum, 用于回传给server
+    private String type;                // 写入索引使用的type名
 
     public static IndexInfo getIndexInfo(JobContext context) {
         String str = context.getConfiguration().get(TEMPLATE_CONFIG);
         return JSON.parseObject(str, IndexInfo.class);
     }
-
 
     @JSONField(serialize = false)
     public void check(TaskConfig taskConfig) throws Exception {
@@ -44,7 +42,7 @@ public class IndexInfo {
             throw new Exception("expanFactor error, expanfactor:" + expanfactor);
         }
 
-        // 判断知否只有一个type，且type的名字是_doc
+        // 判断知否只有一个type
         IndexConfig indexConfig = new IndexConfig(setting);
         if (indexConfig.getMappings() == null) {
             return;
@@ -78,6 +76,7 @@ public class IndexInfo {
 
 
 
+    /* 获得所有type名和类型的映射关系 */
     @JSONField(serialize = false)
     public Map<String, String> getTypeMap() throws Exception {
         Map<String, String> ret = new HashMap<>();

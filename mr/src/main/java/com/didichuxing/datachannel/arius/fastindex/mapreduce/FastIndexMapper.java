@@ -37,6 +37,7 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
         try {
             taskConfig = TaskConfig.getTaskConfig(context);
 
+            // 判断主键是否在Hive表中存在
             for(String key : taskConfig.getKeyList()) {
                 if(this.schema.getPosition(key)==null) {
                     LogUtils.info("key not exist, key:" + key);
@@ -59,10 +60,10 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
 
         List<String> keyList = taskConfig.getKeyList();
         if(keyList==null || keyList.size()==0) {
-            shardNo = (int) (Math.random()*templateConfig.getShardNum());
+            shardNo = (int) (Math.random()*templateConfig.getReduceNum());
         } else {
             String keyStr = getKeyValue(keyList, hCatRecord);
-            shardNo = CommonUtils.getShardId(keyStr, templateConfig.getShardNum());
+            shardNo = CommonUtils.getShardId(keyStr, templateConfig.getReduceNum());
         }
 
         //shard分片个数与reduce个数一样
@@ -87,11 +88,5 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
         } else {
             return sb.toString();
         }
-    }
-
-    // 默认数据中的最大数==es索引中的shard个数==reducer个数
-    private int getShardNumByShardField(String fieldName, DefaultHCatRecord hCatRecord) throws HCatException {
-        Object id = hCatRecord.get(fieldName, this.schema);
-        return Integer.valueOf(id.toString());
     }
 }

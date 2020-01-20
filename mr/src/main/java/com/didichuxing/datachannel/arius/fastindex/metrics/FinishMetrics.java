@@ -7,7 +7,6 @@ import lombok.Data;
 
 @Data
 public class FinishMetrics {
-    private String jobId;
     private long taskId;
 
     private String startTime;           // 任务启动时刻
@@ -22,21 +21,13 @@ public class FinishMetrics {
     private long totalWriteRecords;     // 写入总条数
     private long totalErrorRecords;     // 读写失败总数
 
-
-    private String readerPluginName = "AriusFastIndexReader";
-    private String writerPluginName = "AriusFastIndexWriter";
-
     private Boolean isSuccess = true;   // 任务运行结果
-
     private String errorMessage;        // 错误的原因描述
-
     private String hostname;            // 执行的主机
-
 
     public FinishMetrics() {}
 
     public FinishMetrics(TaskConfig taskConfig) {
-        this.jobId = taskConfig.getJobId();
         this.taskId = taskConfig.getTaskId();
         this.hostname = HostUtils.HOSTNAME;
     }

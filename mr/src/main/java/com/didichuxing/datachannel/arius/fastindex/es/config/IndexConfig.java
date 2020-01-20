@@ -6,6 +6,7 @@ import com.didichuxing.datachannel.arius.fastindex.es.config.mapping.MappingConf
 import java.util.HashMap;
 import java.util.Map;
 
+/* 表示单个索引的setting和mapping信息 */
 public class IndexConfig {
     private static final String ALIASES_STR = "aliases";
     private static final String MAPPINGS_STR = "mappings";

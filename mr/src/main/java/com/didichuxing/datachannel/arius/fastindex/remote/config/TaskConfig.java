@@ -14,43 +14,39 @@ import org.apache.hadoop.conf.Configuration;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/*
+ * fastIndex任务的配置信息
+ * 通过hadoop jar mr.jar  com.didichuxing.datachannel.arius.fastindex.FastIndex $taskConfig 传入
+ */
 @Data
 public class TaskConfig {
     public static final String TASKCONFIG = "taskConfig";
 
-    private String jobId;
-    private long taskId;
+    private long taskId;                // 任务id
 
-    private String hdfsInputPath;       // hive对应hdfs路径
+    private String hdfsInputPath;       // hive表对应的hdfs路径, 用于获得Hive数据大小
     private String hiveDB;              // hive库名
     private String hiveTable;           // hive表名
     private String hiveColumns;         // hive表结构
-    private Set<String>  intColumns = new HashSet<>();
+    private Set<String>  intColumns = new HashSet<>();  // hive表中，类型为int的字段名集合
 
-    private String esTemplate;          // 索引index
+    private String esTemplate;          // es模板名
 
-    private String key;                 // 主键
+    private String key;                 // es索引主键名，多个字段名以逗号分隔
 
-    private Map<String, String> filter;
-    private long time;                  // 数据对应的时间
+    private Map<String, String> filter; // hive的过滤字段以及对应的value
+    private long time;                  // es索引分区时间
 
-    private String hdfsOutputPath;      // mr输出路径
+    private String hdfsOutputPath;      // reducer产生的lucene文件在hdfs上的存储路径
 
     private String user;                // hive用户名
     private String passwd;              // hive密码
 
     private String mrqueue;             // hive计算队列
-    private String metricTopic;         // 统计信息topic
 
-    /* kafka相关 */
-    private String kafkaServer;         // kafka server地址
-    private String kafkaClusterId;
-    private String kafkaAppId;
-    private String kafkaPassword;
-
-    private String env = "online";
-    private Integer batchSize = 500;
-    private Integer threadPoolSize = 4;
+    private String env = "online";      // 运行环境
+    private Integer batchSize = 500;    // reducer任务中单次写入es的数据个数
+    private Integer threadPoolSize = 4; // reducer任务中写入线程个数
 
     @JSONField(serialize = false)
     public void check() throws Exception {
@@ -61,11 +57,6 @@ public class TaskConfig {
                 StringUtils.isBlank(user) ||
                 StringUtils.isBlank(passwd) ||
                 StringUtils.isBlank(mrqueue) ||
-                StringUtils.isBlank(metricTopic) ||
-                StringUtils.isBlank(kafkaServer) ||
-                StringUtils.isBlank(kafkaClusterId) ||
-                StringUtils.isBlank(kafkaAppId) ||
-                StringUtils.isBlank(kafkaPassword) ||
                 time<=0) {
             throw new Exception("param is wrong");
         }
@@ -224,7 +215,6 @@ public class TaskConfig {
         String str = context.getConfiguration().get(TaskConfig.TASKCONFIG);
         TaskConfig taskConfig = JSON.parseObject(str, TaskConfig.class);
         if(taskConfig!=null) {
-            LogUtils.addIgnoreStr(taskConfig.kafkaPassword);
             LogUtils.addIgnoreStr(taskConfig.passwd);
         }
 
@@ -234,7 +224,6 @@ public class TaskConfig {
     public static TaskConfig getTaskConfig(String str) {
         TaskConfig taskConfig = JSON.parseObject(str, TaskConfig.class);
         if (taskConfig != null) {
-            LogUtils.addIgnoreStr(taskConfig.kafkaPassword);
             LogUtils.addIgnoreStr(taskConfig.passwd);
         }
 

@@ -13,17 +13,14 @@ import java.util.List;
 
 import static com.didichuxing.datachannel.arius.fastindex.utils.HttpUtil.doHttpWithRetry;
 
+/* 封装对ES的操作 */
 @Slf4j
 public class ESClient {
-    private TaskMetrics taskMetrics = new TaskMetrics();
-
-    public Integer port;
-
-    public String index;
-
-    public String type;
-
-    private boolean isFirstError = true;
+    private TaskMetrics taskMetrics = new TaskMetrics();    // 统计信息
+    public Integer port;                                    // ES的端口
+    public String index;                                    // 操作的索引名
+    public String type;                                     // 写入的type名
+    private boolean isFirstError = true;                    // 用于只打印第一次错误的信息
 
     public ESClient(Integer port, String index, String type) {
         this.port = port;
@@ -76,7 +73,7 @@ public class ESClient {
         return obj.getJSONObject(index).getJSONObject("mappings");
     }
 
-    /* 获得Index mapping */
+    /* 获得Index setting和mapping */
     public void getSetting() throws Exception {
         String url = getUrlPrefix() + "/" + index.trim();
         String result = doHttpWithRetry(url,null,  null, HttpUtil.HttpType.GET, false, 5);
@@ -84,7 +81,7 @@ public class ESClient {
     }
 
 
-    /* index是否存在 */
+    /* forceMerge索引，将segment数目降低为1个 */
     public void forceMerge() throws Exception {
         String url = getUrlPrefix() + "/" + index.trim() + "/_forcemerge";
         JSONObject param = new JSONObject();
@@ -95,6 +92,7 @@ public class ESClient {
         LogUtils.info("esclient force merge ret:" + str);
     }
 
+    /* flush索引 */
     private static final String SHARD_STR = "_shards";
     public boolean flush() throws Exception {
         String url = getUrlPrefix() + "/" + index.trim() + "/_flush";
@@ -113,6 +111,7 @@ public class ESClient {
         return false;
     }
 
+    /* refresh索引 */
     public boolean refresh() throws Exception {
         String url = getUrlPrefix() + "/" + index.trim() + "/_refresh";
         String result = doHttpWithRetry(url, null, "{}", HttpUtil.HttpType.POST, false, 5);
@@ -130,7 +129,7 @@ public class ESClient {
         return false;
     }
 
-    /* 多线程调用 */
+    /* 多线程写入数据 */
     public void indexNodes(List<IndexNode> nodes) {
         long start = System.currentTimeMillis();
 

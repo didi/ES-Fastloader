@@ -1,5 +1,6 @@
 package com.didichuxing.datachannel.arius.fastindex.remote;
 
+/* 环境信息 */
 public enum EnvEnum {
     ONLINE("online"),PRE("pre"), TEST("test");
 

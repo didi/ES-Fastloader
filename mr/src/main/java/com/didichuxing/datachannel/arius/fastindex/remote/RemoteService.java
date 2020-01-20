@@ -42,24 +42,12 @@ public class RemoteService {
     }
 
 
-    private static final String IS_FASTINDEX_PATH= "fastindex/isFastIndex.do";
-    public static boolean isFastIndex(String template) {
-        JSONObject param = new JSONObject();
-        param.put("template", template);
-
-        String url = String.format(URL_FORMAT_STR, HOST_STR, IS_FASTINDEX_PATH);
-        String result = doHttpWithRetry(url, param,null, HttpUtil.HttpType.GET, true, 5);
-        LogUtils.info("is fast index ret:" + result);
-        if (StringUtils.isBlank(result)) {
-            return false;
-        }
-
-        return Boolean.valueOf(result);
-    }
-
-
+    /*
+     * 获得索引的配置信息，访问server的fastindex/getIndexInfo.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.getIndexInfo()函数
+     */
     private static final String GET_TEMPLATE_PATH = "fastindex/getIndexInfo.do";
-    public static IndexInfo getTemplateConfig(String template, long time, long hdfsSize) {
+    public static IndexInfo getIndexConfig(String template, long time, long hdfsSize) {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
@@ -70,7 +58,7 @@ public class RemoteService {
         String url = String.format(URL_FORMAT_STR, HOST_STR, GET_TEMPLATE_PATH);
         LogUtils.info("send http, url:" + url + ", param:" + param.toJSONString());
         String res = doHttpWithRetry(url, param,null, HttpUtil.HttpType.GET, true, 5);
-        LogUtils.info("getTemplateConfig response:" + res);
+        LogUtils.info("getIndexConfig response:" + res);
         if (res == null) {
             return null;
         }
@@ -79,6 +67,10 @@ public class RemoteService {
     }
 
 
+    /*
+     * 触发数据加载流程，访问server的fastindex/startLoadData.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.startLoadData()函数
+     */
     private static final String START_LOAD_PATH = "fastindex/startLoadData.do";
     public static String startLoadData(String template, long time, String hdfsDir, long expanfactor, String user, String passwd) {
         JSONObject param = new JSONObject();
@@ -98,6 +90,10 @@ public class RemoteService {
         return  ret;
     }
 
+    /*
+     * 提交mapping函数，访问server的fastindex/submitMapping.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.submitMapping()函数
+     */
     private static final String SUBMIT_MAPPING_PATH = "fastindex/submitMapping.do";
     public static void submitMapping(String template, long time, int shardNum, JSONObject mapping) {
         JSONObject param = new JSONObject();
@@ -112,6 +108,10 @@ public class RemoteService {
         LogUtils.info("submitMapping res:" + res);
     }
 
+    /*
+     * 提交metric函数，访问server的fastindex/submitMetric.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.submitMetric()函数
+     */
     private static final String SUBMIT_METRIC_PATH = "fastindex/submitMetric.do";
     public static void submitMetric(String template, long time, int shardNum, TaskMetrics metric) {
         LogUtils.info("submit metric " + JSON.toJSONString(metric));
@@ -127,6 +127,10 @@ public class RemoteService {
         LogUtils.info("submitMetric res:" + res);
     }
 
+    /*
+     * 获得metric函数，访问server的fastindex/getMetricByIndex.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.getMetricByIndex()函数
+     */
     private static final String GET_METRIC_PATH = "fastindex/getMetricByIndex.do";
     public static Map<String, TaskMetrics> getMetric(String template, long time) {
         JSONObject param = new JSONObject();
@@ -141,7 +145,10 @@ public class RemoteService {
         return JSON.parseObject(res ,new TypeReference<HashMap<String,TaskMetrics>>() {});
     }
 
-
+    /*
+     * 判断任务是否已经结束，访问server的fastindex/isFinished.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.isFinished()函数
+     */
     private static final String IS_FINISH_PATH= "fastindex/isFinished.do";
     public static boolean loadDataIsFinish(String template, long time) {
         JSONObject param = new JSONObject();
@@ -159,6 +166,10 @@ public class RemoteService {
         return Boolean.valueOf(result);
     }
 
+    /*
+     * 去除任务结束标识，访问server的fastindex/removeFinishTag.do
+     * 对应代码，server模块中的com.didichuxing.fastindex.controller.removeFinishTag()函数
+     */
     private static final String REMOVE_FINISH_TAG_PATH = "fastindex/removeFinishTag.do";
     public static void removeFinishTag(String template, long time) {
         JSONObject param = new JSONObject();

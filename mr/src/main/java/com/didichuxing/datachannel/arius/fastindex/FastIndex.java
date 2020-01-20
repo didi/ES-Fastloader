@@ -27,6 +27,10 @@ import org.apache.hive.hcatalog.data.DefaultHCatRecord;
 import org.apache.hive.hcatalog.mapreduce.HCatInputFormat;
 
 
+/*
+ * 入口函数，执行方式如下
+ * hadoop jar  mr.jar com.didichuxing.datachannel.arius.fastindex.FastIndex  ${taskConfig}
+ */
 public class FastIndex  extends Configured implements Tool {
     private static final String MAIN_CLASS = "FastIndex";
 
@@ -40,7 +44,7 @@ public class FastIndex  extends Configured implements Tool {
         }
 
         @Override
-        public int run(String[] args) throws Exception {
+        public int run(String[] args) {
             long startTime = System.currentTimeMillis();
             try {
                if (args.length != 1) {
@@ -52,23 +56,21 @@ public class FastIndex  extends Configured implements Tool {
                    sb.append(args[i]).append(" ");
                 }
 
+                // 解析taskConfig
                 String taskConfigStr = sb.toString();
                 LogUtils.info("taskConfig" + taskConfigStr);
                 taskConfig = TaskConfig.getTaskConfig(taskConfigStr);
                 taskConfig.check();
                 LogUtils.info("taskConfig" + JSON.toJSONString(taskConfig));
 
-
-
+                // 根据当前环境，配置server地址
                 RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
 
-                if (!RemoteService.isFastIndex(taskConfig.getEsTemplate())) {
-                    throw new Exception("template is not in fastindex cluster, template:" + taskConfig.getEsTemplate());
-                }
-
+                // 如果任务已经结束，则清理finish标识，重新执行
                 if(RemoteService.loadDataIsFinish(taskConfig.getEsTemplate(), taskConfig.getTime())) {
                     LogUtils.info("remove template finish tag, template:" + taskConfig.getEsTemplate() + ", time:" + taskConfig.getTime());
                     RemoteService.removeFinishTag(taskConfig.getEsTemplate(), taskConfig.getTime());
+                    // es需要时间刷新
                     Thread.sleep(10000);
                 }
 
@@ -76,15 +78,19 @@ public class FastIndex  extends Configured implements Tool {
                     throw new Exception("template finish, template:" + taskConfig.getEsTemplate() + ", time:" + taskConfig.getTime());
                 }
 
+                // 配置hadoop用户名，密码
+                // FIXME 滴滴内部策略，需要修改成对应hadoop初始化逻辑
                 System.setProperty("HADOOP_USER_NAME", taskConfig.getUser());
                 System.setProperty("HADOOP_USER_PASSWORD", taskConfig.getPasswd());
 
-                // 清理hdfs上相关文件
+                // 清理hdfs上的相关文件
                 HdfsUtil.deleteDir(new Configuration(), taskConfig.getHdfsOutputPath());
 
-                indexInfo = RemoteService.getTemplateConfig(taskConfig.getEsTemplate(), taskConfig.getTime(), taskConfig.getHdfsSize());
+                // 获得索引配置信息
+                indexInfo = RemoteService.getIndexConfig(taskConfig.getEsTemplate(), taskConfig.getTime(), taskConfig.getHdfsSize());
                 indexInfo.check(taskConfig);
 
+                // 执行mr任务
                 Configuration conf = getHdfsConfig();
                 Job job = getHdfsJob(conf);
                 startGetJobIdThread(job);
@@ -94,6 +100,8 @@ public class FastIndex  extends Configured implements Tool {
                 if (res) {
                     LogUtils.info("################ MapReduce success, job id:" + job.getJobID() + ", result:" + res);
                     LogUtils.info("################ LoadDataToES start");
+
+                    // mr任务完成支持，Lucene文件在taskConfig.getHdfsESOutputPath()目录中，触发数据加载任务，把数据加载到ES中
                     String ret = RemoteService.startLoadData(taskConfig.getEsTemplate(), taskConfig.getTime(), taskConfig.getHdfsESOutputPath(),
                             indexInfo.getExpanfactor(), taskConfig.getUser(), taskConfig.getPasswd());
                     LogUtils.info("start load data, ret:" + ret);
@@ -101,11 +109,14 @@ public class FastIndex  extends Configured implements Tool {
                         throw new Exception("start load data error");
                     }
 
+                    // 等待加载任务完成
                     waitForFinish();
                     LogUtils.info("################ LoadDataToES finish");
 
+                    // 清理数据，防止hdfs出现文件过多的情况
                     HdfsUtil.deleteDir(new Configuration(), taskConfig.getHdfsOutputPath());
 
+                    // 提交当前reducer的metric信息
                     MetricService.sendMetric(taskConfig, startTime, System.currentTimeMillis());
                     LogUtils.info("################ Arius FastIndex finish");
                     return 0;
@@ -126,6 +137,7 @@ public class FastIndex  extends Configured implements Tool {
             }
         }
 
+        // 配置mr参数
         private Job getHdfsJob(Configuration conf) throws Exception {
             Job job = Job.getInstance(conf, MAIN_CLASS);
             job.setJobName("AriusFastIndex_" + taskConfig.getEsTemplate());
@@ -139,13 +151,14 @@ public class FastIndex  extends Configured implements Tool {
             job.setReducerClass(FastIndexReducer.class);
             job.setOutputKeyClass(NullWritable.class);
             job.setOutputValueClass(NullWritable.class);
-            job.setNumReduceTasks(indexInfo.getShardNum());
+            job.setNumReduceTasks(indexInfo.getReduceNum());
             job.setOutputFormatClass(TextOutputFormat.class);
             FileOutputFormat.setOutputPath(job, new Path(taskConfig.getHdfsMROutputPath()));
 
             return job;
         }
 
+        // 配置mr参数
         private Configuration getHdfsConfig() {
             Configuration conf = getConf();
             conf.set(TaskConfig.TASKCONFIG, JSON.toJSONString(taskConfig));
@@ -154,10 +167,10 @@ public class FastIndex  extends Configured implements Tool {
             conf.setBoolean("mapreduce.map.output.compress", true); //设置map输出压缩
             conf.setClass(Job.MAP_OUTPUT_COMPRESS_CODEC, GzipCodec.class, CompressionCodec.class);
 
-            conf.set("mapreduce.user.classpath.first", "true"); //设置优先使用用户classpath
-            conf.set("mapred.task.timeout", "8000000"); //毫秒, 默认10分钟, 加长是防止copy es数据时间过短
-            conf.set("mapreduce.map.memory.mb", "6144");
-            conf.set("mapreduce.reduce.memory.mb", "15360");
+            conf.set("mapreduce.user.classpath.first", "true");     //设置优先使用用户classpath
+            conf.set("mapred.task.timeout", "8000000");             //毫秒, 默认10分钟, 加长是防止copy es数据时间过短
+            conf.set("mapreduce.map.memory.mb", "6144");            // 单个map任务最多6G
+            conf.set("mapreduce.reduce.memory.mb", "15360");        // 单个reducer任务最多15G
 
             conf.set("mapreduce.map.java.opts", "-Xmx4096m");
             conf.set("mapreduce.reduce.java.opts", "-Xmx2048m");
@@ -190,6 +203,7 @@ public class FastIndex  extends Configured implements Tool {
             return conf;
         }
 
+        /* 获得mr任务的jobId */
         private void startGetJobIdThread(Job job) {
             Thread thread = new Thread(new Runnable() {
                 @Override
@@ -216,6 +230,7 @@ public class FastIndex  extends Configured implements Tool {
             thread.start();
         }
 
+        /* 等待数据加载任务结束 */
         private void waitForFinish() throws Exception {
             int i=3*60;
             while (i>0) {

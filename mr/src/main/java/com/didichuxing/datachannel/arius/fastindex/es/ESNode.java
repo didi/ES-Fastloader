@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.didichuxing.datachannel.arius.fastindex.utils.PortUtils.choicePort;
 
+/* 启动一个独立的es进程， 对外提供es写入服务 */
 @Slf4j
 public class ESNode {
     private static final String ELASTICSEARCH_6_6_1_ZIP_STR = "elasticsearch-6.6.1.zip";
@@ -32,10 +33,10 @@ public class ESNode {
     private IndexInfo indexInfo;
 
     @Getter
-    private EmbeddedElastic elastic;
+    private EmbeddedElastic elastic;        // 启动的ES进程
 
     @Getter
-    private ESClient esClient;
+    private ESClient esClient;              // 向ES发送请求
 
     private String localWorkPath;
 
@@ -55,10 +56,12 @@ public class ESNode {
         start();
     }
 
-    /* 启动容器 */
+    /* 启动ES进程 */
     public void start() throws Exception {
         List<Integer> ports = choicePort();
 
+        // FIXME 由于github限制，不能在git项目中提交es的安装zip包，source目录下有es的解压目录elasticsearch-6.6.1
+        // FIXME 需要手动压缩成zip包，命令是在source目录下执行zip -r elasticsearch-6.6.1.zip elasticsearch-6.6.1
         elastic = EmbeddedElastic.builder()
                 .withSetting(PopularProperties.HTTP_PORT, ports.get(0))
                 .withSetting(PopularProperties.TRANSPORT_TCP_PORT, ports.get(1))
@@ -73,7 +76,7 @@ public class ESNode {
 
         esClient = new ESClient(elastic.getHttpPort(), LOCAL_INDEX_NAME, indexInfo.getType());
 
-        // 配置集群属性
+        // 配置集群属性, 防止hadoop节点磁盘空闲空间不足导致reducer任务失败
         JSONObject param = new JSONObject();
         param.put("cluster.routing.allocation.disk.watermark.flood_stage", "10mb");
         param.put("cluster.routing.allocation.disk.watermark.high", "20mb");
@@ -84,8 +87,7 @@ public class ESNode {
         esClient.createNewIndex(indexInfo.getSetting());
     }
 
-
-
+    /* 停止ES进程 */
     public void stop() {
         log.info("close es node start");
         try {
@@ -98,6 +100,7 @@ public class ESNode {
         log.info("close es node stop");
     }
 
+    /* 获得ES存放lucene文件的目录 */
     public String getDataDir() {
         return localWorkPath + "/data";
     }

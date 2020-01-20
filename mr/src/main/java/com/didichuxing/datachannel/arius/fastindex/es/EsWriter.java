@@ -6,21 +6,14 @@ import com.didichuxing.datachannel.arius.fastindex.utils.LogUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+/* 负责多线程写入ES数据 */
 public class EsWriter {
-    public static final String TYPE_STR = "_doc";
-
     private ESClient esClient;
-
-    private Integer batchSize = 500;
-
-    private Integer threadPoolSize = 4;
-
-    private List<ESClient.IndexNode> nodeList = new ArrayList<>();
-
+    private Integer batchSize = 500;        // 单次写入的数据个数
+    private Integer threadPoolSize = 4;     // 线程个数
+    private List<ESClient.IndexNode> nodeList = new ArrayList<>();  // 当前缓存的ES数据
     private boolean isStop = false;
-
     private Object lock = new Object();
-
     private List<Thread> threadPool = new ArrayList<>();
 
 
