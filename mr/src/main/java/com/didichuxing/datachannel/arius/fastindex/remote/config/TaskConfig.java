@@ -142,17 +142,9 @@ public class TaskConfig {
     }
 
     @JSONField(serialize = false)
-    public String getFilterStr(String intKeyStr) throws Exception {
+    public String getFilterStr() throws Exception {
         if(filter==null || filter.size()==0) {
             throw new Exception("filter is blank");
-        }
-
-        Set<String> intKeySet = intColumns;
-        if(intKeyStr!=null && intKeyStr.trim().length()>0) {
-            String[] intKeys = intKeyStr.split(",");
-            for (String k : intKeys) {
-                intKeySet.add(k);
-            }
         }
 
         StringBuilder sb = new StringBuilder();
@@ -164,7 +156,7 @@ public class TaskConfig {
 
                 String str = "( ";
                 for(String v : values) {
-                    if (intKeySet.contains(key)) {
+                    if (intColumns.contains(key)) {
                         str = str + key + "=" + v;
                     } else {
                         str = str + key + "='" + v  + "'";
@@ -178,7 +170,7 @@ public class TaskConfig {
                 sb.append(str);
 
             } else {
-                if (intKeySet.contains(key)) {
+                if (intColumns.contains(key)) {
                     sb.append(key).append("=").append(filter.get(key));
 
                 } else {

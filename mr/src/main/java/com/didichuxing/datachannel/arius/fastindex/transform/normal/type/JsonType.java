@@ -16,21 +16,14 @@ public class JsonType extends Type {
         matchESTypes.add("geo_shape".toUpperCase());
     }
 
-    private boolean null2Null;
-
-    public JsonType(String name, boolean null2Null) {
+    public JsonType(String name) {
         super(name);
-        this.null2Null = null2Null;
     }
 
     @Override
     public Object tranform(Object value) {
         if(value==null) {
-            if(null2Null) {
-                return null;
-            } else {
-                return "";
-            }
+            return null;
         }
 
         try {

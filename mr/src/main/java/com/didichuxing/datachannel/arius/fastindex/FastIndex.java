@@ -134,7 +134,7 @@ public class FastIndex  extends Configured implements Tool {
             job.setInputFormatClass(HCatInputFormat.class);
             job.setMapOutputKeyClass(IntWritable.class);
             job.setMapOutputValueClass(DefaultHCatRecord.class);
-            HCatInputFormat.setInput(job, taskConfig.getHiveDB(), taskConfig.getHiveTable(), taskConfig.getFilterStr(indexInfo.getIntFilterKeys()));
+            HCatInputFormat.setInput(job, taskConfig.getHiveDB(), taskConfig.getHiveTable(), taskConfig.getFilterStr());
 
             job.setReducerClass(FastIndexReducer.class);
             job.setOutputKeyClass(NullWritable.class);

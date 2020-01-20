@@ -17,9 +17,9 @@ import static com.didichuxing.datachannel.arius.fastindex.utils.HttpUtil.doHttpW
 
 @Slf4j
 public class RemoteService {
-    private static final String ONLINE_HOST_STR = "10.88.128.149:30366";
-    private static final String PRE_HOST_STR = "arius-meta-server-pre-sf-a124b-0.docker.ys:8080";
-    private static final String TEST_HOST_STR = "10.179.40.239:8080";
+    private static final String ONLINE_HOST_STR = "127.0.0.1:8080";
+    private static final String PRE_HOST_STR = "127.0.0.1:8080";
+    private static final String TEST_HOST_STR = "127.0.0.1:8080";
 
     private static String SRC_TAG;
     private static String HOST_STR;

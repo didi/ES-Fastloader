@@ -32,43 +32,11 @@ public class IndexInfo {
 
     private String type;
 
-    private String smallData;
-
-    private String intFilterKeys;
-
-    // 转化相关逻辑
-    private boolean longToStr = false;
-
-    private boolean longNullToZero = false;
-
-    private boolean removeBracket = false;
-
-    private boolean isPassengerPre = false;
-
-    private boolean null2Null = false;
-
-    private String shardField = null;
-
-    private String strToArray = null;
-
     public static IndexInfo getIndexInfo(JobContext context) {
         String str = context.getConfiguration().get(TEMPLATE_CONFIG);
         return JSON.parseObject(str, IndexInfo.class);
     }
 
-    @JSONField(serialize = false)
-    public Set<String> getStrToArrayFields() {
-        Set<String> ret = new HashSet<>();
-        if(strToArray==null || strToArray.length()==0) {
-            return ret;
-        }
-
-        for(String f : strToArray.split(",")) {
-            ret.add(f);
-        }
-
-        return ret;
-    }
 
     @JSONField(serialize = false)
     public void check(TaskConfig taskConfig) throws Exception {
@@ -106,10 +74,6 @@ public class IndexInfo {
                 type = "type";
             }
         }
-
-
-        Set<String> strToArrayFields = getStrToArrayFields();
-        LogUtils.info("str to array fields:" + JSON.toJSONString(strToArrayFields));
     }
 
 

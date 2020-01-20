@@ -49,13 +49,4 @@ public enum ESVersion {
 
         return null;
     }
-
-    //    public static void main(String[] args) {
-    //        System.out.println("2.3.3 : " + ESVersion.valueBy("2.3.3").getStr());
-    //        System.out.println("6.5.1 : " + ESVersion.valueBy("6.5.1").getStr());
-    //        System.out.println("6.6.1 : " + ESVersion.valueBy("6.6.1").getStr());
-    //        System.out.println("3.3.0 : " + ESVersion.valueBy("7.5.0").getStr());
-    //        System.out.println("5.5.0 : " + ESVersion.valueBy("5.5.0").getStr());
-    //    }
-
 }

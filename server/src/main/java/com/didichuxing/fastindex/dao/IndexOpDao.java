@@ -2,7 +2,7 @@ package com.didichuxing.fastindex.dao;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.didichuxing.fastindex.common.TemplateConfig;
+import com.didichuxing.fastindex.common.es.TemplateConfig;
 import com.didichuxing.fastindex.common.es.IndexConfig;
 import com.didichuxing.fastindex.common.es.catshard.ESIndicesSearchShardsResponse;
 import com.didichuxing.fastindex.common.es.mapping.TypeConfig;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.didichuxing.fastindex.utils.HttpUtil.doHttpWithRetry;
 

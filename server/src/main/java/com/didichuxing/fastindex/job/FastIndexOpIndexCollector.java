@@ -1,7 +1,7 @@
 package com.didichuxing.fastindex.job;
 
 
-import com.didichuxing.fastindex.common.TemplateConfig;
+import com.didichuxing.fastindex.common.es.TemplateConfig;
 import com.didichuxing.fastindex.common.po.FastIndexOpIndexPo;
 import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
 import com.didichuxing.fastindex.dao.FastIndexTemplateConfigDao;

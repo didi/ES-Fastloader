@@ -19,20 +19,14 @@ public class DoubleType extends Type {
         matchHiveTypes.add("decimal".toUpperCase());
     }
 
-    private boolean nullToZero;
-    public DoubleType(String name, boolean nullToZero) {
+    public DoubleType(String name) {
         super(name);
-        this.nullToZero = nullToZero;
     }
 
     @Override
     public Object tranform(Object value) {
         if(value==null) {
-            if(nullToZero) {
-                return 0;
-            } else {
-                return null;
-            }
+            return null;
         }
 
         try {
@@ -43,11 +37,7 @@ public class DoubleType extends Type {
                 return array;
             } else {
                 tranformError(value.toString(), e);
-                if (nullToZero) {
-                    return 0;
-                } else {
-                    return null;
-                }
+                return null;
             }
         }
     }

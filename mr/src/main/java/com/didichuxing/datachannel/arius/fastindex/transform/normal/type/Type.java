@@ -32,7 +32,7 @@ public abstract class Type {
 
     public static Type matchESType(String name, String type, IndexInfo indexInfo) {
         if(StringUtils.isBlank(type)) {
-            return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+            return new StringType(name);
         }
 
         type = type.toUpperCase();
@@ -42,27 +42,27 @@ public abstract class Type {
         }
 
         if(DoubleType.matchESTypes.contains(type)) {
-            return new DoubleType(name, indexInfo.isLongNullToZero());
+            return new DoubleType(name);
         }
 
         if(LongType.matchESTypes.contains(type)) {
-            return new LongType(name, indexInfo.isLongToStr(), indexInfo.isLongNullToZero());
+            return new LongType(name);
         }
 
         if(StringType.matchESTypes.contains(type)) {
-            return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+            return new StringType(name);
         }
 
         if(JsonType.matchESTypes.contains(type)) {
-            return new JsonType(name, indexInfo.isNull2Null());
+            return new JsonType(name);
         }
 
-        return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+        return new StringType(name);
     }
 
     public static Type matchHiveType(String name, String type, IndexInfo indexInfo) {
         if (StringUtils.isBlank(type)) {
-            return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+            return new StringType(name);
         }
 
         type = type.toUpperCase();
@@ -72,22 +72,22 @@ public abstract class Type {
         }
 
         if (DoubleType.matchHiveTypes.contains(type)) {
-            return new DoubleType(name, indexInfo.isLongNullToZero());
+            return new DoubleType(name);
         }
 
         if (LongType.matchHiveTypes.contains(type)) {
-            return new LongType(name, indexInfo.isLongToStr(), indexInfo.isLongNullToZero());
+            return new LongType(name);
         }
 
         if (StringType.matchHiveTypes.contains(type)) {
-            return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+            return new StringType(name);
         }
 
         if (JsonType.matchHiveTypes.contains(type)) {
-            return new JsonType(name, indexInfo.isNull2Null());
+            return new JsonType(name);
         }
 
-        return new StringType(name, indexInfo.isRemoveBracket(), indexInfo.isNull2Null(), indexInfo.getStrToArrayFields());
+        return new StringType(name);
     }
 
     protected void tranformError(String s, Throwable t) {

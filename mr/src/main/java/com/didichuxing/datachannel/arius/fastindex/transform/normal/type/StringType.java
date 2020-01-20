@@ -22,57 +22,17 @@ public class StringType extends Type {
         matchHiveTypes.add("timestamp".toUpperCase());
     }
 
-    private boolean removeBracket; // 是否去除两边的中括号
-    private boolean null2Null;
-    private Set<String> strToArray = new HashSet<>();
 
-
-    public StringType(String name, boolean removeBracket, boolean null2Null, Set<String> strToArray) {
+    public StringType(String name) {
         super(name);
-
-        this.removeBracket = removeBracket;
-        this.null2Null = null2Null;
-        if(strToArray!=null) {
-            this.strToArray.addAll(strToArray);
-        }
     }
 
     @Override
     public Object tranform(Object value) {
         if(value==null) {
-            if(null2Null) {
-                return null;
-            } else {
-                return "";
-            }
+            return null;
         }
 
-        String str = value.toString();
-
-        if(strToArray.contains(name)) {
-            JSONArray jsonArray = toArray(str);
-            if(jsonArray!=null) {
-                return jsonArray;
-            }
-        }
-
-        if(removeBracket) {
-            int tag = 0;
-            if(str.startsWith("[")) {
-                str = str.substring(1);
-                tag++;
-            }
-
-            if(str.endsWith("]")) {
-                str = str.substring(0, str.length()-1);
-                tag++;
-            }
-
-            if(tag==2) {
-                str = str.replaceAll(" ", "");
-            }
-        }
-
-        return str;
+        return value.toString();
     }
 }

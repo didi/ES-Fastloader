@@ -1,4 +1,4 @@
-package com.didichuxing.fastindex.common;
+package com.didichuxing.fastindex.common.es;
 
 
 import com.alibaba.fastjson.JSONArray;
