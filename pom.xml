@@ -12,7 +12,6 @@
     <modules>
         <module>plugin</module>
         <module>mr</module>
-        <module>server</module>
     </modules>
 
     <dependencyManagement>

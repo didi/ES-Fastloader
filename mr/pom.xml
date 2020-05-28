@@ -12,8 +12,31 @@
     <artifactId>mr</artifactId>
 
     <dependencies>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.67</version>
+        </dependency>
 
-<dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.2.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>2.7.2</version>
@@ -82,18 +105,13 @@
             <artifactId>protobuf-java</artifactId>
             <version>3.6.1</version>
         </dependency>
-<!-- tools -->
+
+        <!-- tools -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.0</version>
             <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.67</version>
         </dependency>
 
         <dependency>
@@ -132,15 +150,7 @@
             <artifactId>log4j-core</artifactId>
             <version>2.11.1</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.2.5</version>
-        </dependency>
-
     </dependencies>
-
 
 
     <build>

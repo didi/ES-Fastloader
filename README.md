@@ -16,7 +16,7 @@ The ES-Fastloader uses the fault tolerance and parallelism of Hadoop and builds 
 
 # Launch command
 * Launch --run in hadoop cluster
-* hadoop jar  mr-1.0.0-SNAPSHOT-with-dep.jar com.didichuxing.datachannel.arius.fastindex.FastIndex $PARAM
+* hadoop jar  mr-1.0.0-SNAPSHOT-with-dep.jar FastIndex $PARAM
 
 # Developer guide
 * API document [wiki](https://github.com/didi/ES-Fastloader/wiki)
