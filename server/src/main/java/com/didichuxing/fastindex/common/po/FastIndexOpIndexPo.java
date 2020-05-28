@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FastIndexOpIndexPo extends BasePo {
-    private String srcTag;
     private String templateName;    // 索引名
     private String indexName;       // 模板名
 
@@ -19,10 +18,6 @@ public class FastIndexOpIndexPo extends BasePo {
 
     @Override
     public String getKey() {
-        if(srcTag==null || srcTag.trim().length()==0) {
-            return indexName;
-        } else {
-            return srcTag.trim() + "_" + indexName;
-        }
+        return indexName;
     }
 }

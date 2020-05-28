@@ -44,7 +44,7 @@ public class TaskConfig {
 
     private String mrqueue;             // hive计算队列
 
-    private String env = "online";      // 运行环境
+    private String host = "127.0.0.1:9200";      // 服务端地址
     private Integer batchSize = 500;    // reducer任务中单次写入es的数据个数
     private Integer threadPoolSize = 4; // reducer任务中写入线程个数
 
@@ -79,9 +79,8 @@ public class TaskConfig {
         }
 
         // 拼接实际使用的路径
-        String srcTag = getSrcTag();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-        String pathtag =srcTag.trim() +"_"+ esTemplate.trim() +"_"+ dateFormat.format(time);
+        String pathtag = esTemplate.trim() +"_"+ dateFormat.format(time);
         if(pathtag.length()>100) {
             pathtag = pathtag.substring(0, 100);
         }
@@ -174,31 +173,6 @@ public class TaskConfig {
 
         String ret = sb.substring(0, sb.length()-5);
         LogUtils.info("filter :" + ret);
-        return ret;
-    }
-
-    @JSONField(serialize = false)
-    public String getSrcTag() throws Exception {
-        String filterStr = null;
-        if (filter != null && filter.size() > 0) {
-            List<String> filterList = new ArrayList<>();
-            for (String key : filter.keySet()) {
-                filterList.add(filter.get(key).replace(",", "_"));
-            }
-
-            Collections.sort(filterList);
-            filterStr = String.join("_", filterList);
-        }
-
-        String ret = hiveDB + "-" + hiveTable;
-        if (filterStr != null) {
-            ret = ret + "-" + filterStr;
-        }
-
-        if(ret.length()>100) {
-            ret = ret.substring(0, 100);
-        }
-
         return ret;
     }
 

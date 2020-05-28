@@ -1,6 +1,5 @@
 package com.didichuxing.datachannel.arius.fastindex.mapreduce;
 
-import com.didichuxing.datachannel.arius.fastindex.remote.EnvEnum;
 import com.didichuxing.datachannel.arius.fastindex.remote.RemoteService;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.TaskConfig;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.IndexInfo;
@@ -45,7 +44,7 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
             }
 
             templateConfig = IndexInfo.getIndexInfo(context);
-            RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
+            RemoteService.setHost(taskConfig.getHost());
 
             LogUtils.info("map setup finish...");
         } catch (Throwable t) {

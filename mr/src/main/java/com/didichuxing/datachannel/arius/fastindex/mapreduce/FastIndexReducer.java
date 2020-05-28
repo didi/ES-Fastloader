@@ -5,7 +5,6 @@ import com.didichuxing.datachannel.arius.fastindex.es.ESNode;
 import com.didichuxing.datachannel.arius.fastindex.es.ESClient;
 import com.didichuxing.datachannel.arius.fastindex.es.EsWriter;
 import com.didichuxing.datachannel.arius.fastindex.es.config.IndexConfig;
-import com.didichuxing.datachannel.arius.fastindex.remote.EnvEnum;
 import com.didichuxing.datachannel.arius.fastindex.remote.RemoteService;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.TaskConfig;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.IndexInfo;
@@ -49,7 +48,7 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
         try {
             taskConfig = TaskConfig.getTaskConfig(context);
             indexInfo = IndexInfo.getIndexInfo(context);
-            RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
+            RemoteService.setHost(taskConfig.getHost());
 
             // 获得当前reducer编号
             this.reduceId = context.getTaskAttemptID().getTaskID().getId();
@@ -106,42 +105,32 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
         LogUtils.info("cleanup start");
 
         try {
-            // 降低translog的大小
+            // 1. 降低translog的大小
             esClient.putSetting("index.translog.retention.size", "8mb");
 
+            // 2. refresh
             if(!esClient.refresh()) {
                 LogUtils.error("refresh get fail");
             }
 
-            // 2 flush
+            // 3 flush
             if(!esClient.flush()) {
                 LogUtils.error("flush get fail");
             }
 
-            // 1 force merge
+            // 4 force merge
             esClient.forceMerge();
 
-            // 3 提交mapping
-            JSONObject mappingJson= MappingUtils.simple(esClient.getMapping());
-            LogUtils.info("simpleMapping:" + mappingJson.toJSONString());
-            mappingJson = MappingUtils.diffMapping(new IndexConfig(indexInfo.getSetting()), mappingJson, esClient.type);
-            if (mappingJson != null) {
-                LogUtils.info("diff mapping:" + mappingJson.toJSONString());
-                RemoteService.submitMapping(taskConfig.getEsTemplate(), taskConfig.getTime(), reduceId, mappingJson);
-            }
 
-            // 4 由于es内部可能存在merge操作,导致文件变动,所以先close掉node, 再去copy文件
+            // 5 由于es内部可能存在merge操作,导致文件变动,所以先close掉node, 再去copy文件
             esNode.stop();
 
-            // 5 压缩文件
+            // 6 打包文件
             String tarFile =  esNode.getDataDir() + "/fastIndex.tar";
             CommonUtils.tarFile(ESNode.LOCAL_ES_WORK_PATH+"/data", tarFile);
 
-            // 6 上传压缩文件到hdfs
+            // 7 上传压缩文件到hdfs
             local2Hdfs(context, tarFile);
-
-            // 7 提交metric信息
-            RemoteService.submitMetric(taskConfig.getEsTemplate(), taskConfig.getTime(), reduceId, esClient.getTaskMetrics());
         } catch (Throwable t) {
             LogUtils.error("clean up error, msg:" + t.getMessage(), t);
             System.exit(-1);

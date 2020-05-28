@@ -1,18 +1,15 @@
 package com.didichuxing.fastindex.server;
 
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-
 import com.didichuxing.fastindex.common.es.IndexConfig;
 import com.didichuxing.fastindex.common.es.catshard.ESIndicesSearchShardsResponse;
 import com.didichuxing.fastindex.common.es.catshard.item.ESNode;
 import com.didichuxing.fastindex.common.es.catshard.item.ESShard;
-import com.didichuxing.fastindex.common.es.mapping.MappingConfig;
-import com.didichuxing.fastindex.common.es.mapping.TypeConfig;
-import com.didichuxing.fastindex.common.es.mapping.TypeDefine;
-import com.didichuxing.fastindex.common.po.*;
-import com.didichuxing.fastindex.dao.*;
+import com.didichuxing.fastindex.common.po.FastIndexLoadDataPo;
+import com.didichuxing.fastindex.common.po.FastIndexOpIndexPo;
+import com.didichuxing.fastindex.dao.FastIndexLoadDataDao;
+import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
+import com.didichuxing.fastindex.dao.IndexOpDao;
 import com.didichuxing.fastindex.utils.SizeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -20,7 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 @Slf4j
@@ -30,16 +30,7 @@ public class FastIndexService {
     private FastIndexLoadDataDao fastIndexLoadDataDao;
 
     @Autowired
-    private FastIndexMappingEsDao fastIndexMappingEsDao;
-
-    @Autowired
     private FastIndexOpIndexDao fastIndexOpIndexDao;
-
-    @Autowired
-    private FastIndexTaskMetricDao fastIndexTaskMetricDao;
-
-    @Autowired
-    private FastIndexTemplateConfigDao fastIndexTemplateConfigDao;
 
     @Autowired
     private IndexOpDao indexOpDao;
@@ -87,26 +78,12 @@ public class FastIndexService {
         settings.remove("index.template");
 
         indexConfig.setSettings(settings);
-
-        int expanFactor = decideExpanFactor(shardNum, hdfsSize);
-
         IndexFastIndexInfo indexFastIndexInfo = new IndexFastIndexInfo();
         indexFastIndexInfo.setIndexConfig(indexConfig);
+
+        int expanFactor = decideExpanFactor(shardNum, hdfsSize);
         indexFastIndexInfo.setReduceNum(shardNum * expanFactor);
         indexFastIndexInfo.setExpanfactor(expanFactor);
-
-        // 使用特殊配置
-        FastIndexTemplateConfigPo templateConfigPo = fastIndexTemplateConfigDao.getByName(template);
-        if (templateConfigPo != null) {
-            indexFastIndexInfo.setTransformType(templateConfigPo.getTransformType());
-            if (templateConfigPo.getExpanfactor() > 0) {
-                indexFastIndexInfo.setExpanfactor(templateConfigPo.getExpanfactor());
-                indexFastIndexInfo.setReduceNum(shardNum * templateConfigPo.getExpanfactor());
-            }
-        }
-
-        // 将索引配置成不可写, 失败重试
-        indexOpDao.updateSetting(indexName, "blocks.write", "true");
         return indexFastIndexInfo;
     }
 
@@ -118,13 +95,12 @@ public class FastIndexService {
      * @param expanFactor getIndexConfig返回给mr任务
      * @param hdfsUser hdfs用户名
      * @param hdfsPasswd hdfs密码
-     * @param srcTag
      */
-    public void startLoadData(String template, long time, String hdfsDir, int expanFactor, String hdfsUser, String hdfsPasswd, String srcTag) throws Exception {
+    public void startLoadData(String template, long time, String hdfsDir, int expanFactor, String hdfsUser, String hdfsPasswd) throws Exception {
         String indexName = getIndexName(template, time);
 
         // 判断索引是否完成
-        if (isFinish(srcTag, indexName)) {
+        if (isFinish(indexName)) {
             throw new Exception("index is finished, indexName:" + indexName);
         }
 
@@ -133,16 +109,6 @@ public class FastIndexService {
 
         // 将索引配置成不可以rebalance
         indexOpDao.updateSetting(indexName, "routing.rebalance.enable", "none");
-
-        // 产生新的mapping
-        MappingConfig mappingConfig = mergeMapping(srcTag, template, time);
-        if (mappingConfig != null) {
-            Map<String, TypeConfig> mappings = mappingConfig.getMapping();
-            for (String type : mappings.keySet()) {
-                TypeConfig typeConfig = mappings.get(type);
-                indexOpDao.updateMapping(indexName, type, typeConfig);
-            }
-        }
 
         // 获得各个shard所在的节点ip
         ESIndicesSearchShardsResponse resp = indexOpDao.getSearchShard(indexName);
@@ -184,9 +150,9 @@ public class FastIndexService {
             for (ESShard es : les) {
                 FastIndexLoadDataPo fastIndexLoadDataPo = new FastIndexLoadDataPo();
 
+                fastIndexLoadDataPo.setCreateTime(System.currentTimeMillis());
                 fastIndexLoadDataPo.setTemplateName(template);
                 fastIndexLoadDataPo.setIndexName(indexName);
-                fastIndexLoadDataPo.setSrcTag(srcTag);
                 fastIndexLoadDataPo.setIndexUUID(uuid);
                 fastIndexLoadDataPo.setShardNum(es.getShard());
 
@@ -204,9 +170,6 @@ public class FastIndexService {
             }
         }
 
-        // 将索引配置成不可写, 失败重试
-        indexOpDao.updateSetting(indexName, "blocks.write", "true");
-
         // 写入任务数据，会有定时任务job执行各个任务
         // 对应的job任务是com.didichuxing.fastindex.job.FastIndexLoadDataCollector
         fastIndexLoadDataDao.batchInsert(fastIndexLoadDataPos);
@@ -214,144 +177,19 @@ public class FastIndexService {
 
 
     /*
-     * 各个reducer任务提交统计信息
-     * @param srcTag
-     * @param template 模板名
-     * @param time 分区时间
-     * @param shardNum reduce编号
-     * @param metric metric信息
-     */
-    public void submitMetric(String srcTag, String template, long time, long reduceId, JSONObject metric) throws Exception {
-        String indexName = getIndexName(template, time);
-
-        List<FastIndexTaskMetricPo> pos = new ArrayList<>();
-        FastIndexTaskMetricPo po = new FastIndexTaskMetricPo();
-        po.setSrcTag(srcTag);
-        po.setIndexName(indexName);
-        po.setAddTime(System.currentTimeMillis());
-        po.setReduceId(reduceId);
-        po.setMetrics(metric);
-        pos.add(po);
-
-        fastIndexTaskMetricDao.batchInsert(pos);
-    }
-
-    /*
-     * mr结束的时候，获得整个任务的统计信息
-     * @param srcTag
-     * @param template 模板名
-     * @param time 时间分区
-     */
-    public JSONObject getAllMetrics(String srcTag, String template, long time) throws Exception {
-        String indexName = getIndexName(template, time);
-
-        List<FastIndexTaskMetricPo> pos = fastIndexTaskMetricDao.getByindexName(indexName);
-        JSONObject ret = new JSONObject();
-        for(FastIndexTaskMetricPo po : pos) {
-            if(equalTag(srcTag, po.getSrcTag())) {
-                ret.put(po.getReduceId()+"", po.getMetrics());
-            }
-        }
-
-        return ret;
-    }
-
-    /*
-     * 各个reducer任务提交mapping
-     * @param srcTag
-     * @param template 模板名
-     * @param time 分区时间
-     * @param shardNum reduce编号
-     * @param mapping 提交的mapping数据
-     */
-    public void sumitMapping(String srcTag, String template, long time, long reduceId, JSONObject mapping) throws Exception {
-        String indexName = getIndexName(template, time);
-
-        List<FastIndexMappingPo> pos = new ArrayList<>();
-        FastIndexMappingPo po = new FastIndexMappingPo();
-        po.setSrcTag(srcTag);
-        po.setIndexName(indexName);
-        po.setAddTime(System.currentTimeMillis());
-        po.setReduceId(reduceId);
-        po.setMapping(JSON.toJSONString(mapping));
-        pos.add(po);
-
-        fastIndexMappingEsDao.batchInsert(pos);
-    }
-
-    /*
-     * 合并reducer提交的mapping
-     * @param srcTag
-     * @param template 模板名
-     * @param time 时间分区
-     */
-    public MappingConfig mergeMapping(String srcTag, String template, long time) throws Exception {
-        String indexName = getIndexName(template, time);
-
-        List<FastIndexMappingPo> pos = fastIndexMappingEsDao.getByindexName(srcTag, indexName);
-        if (pos == null) {
-            return null;
-        }
-
-        // 检查是否有字段定义不一致的情况
-        Map<String, TypeDefine> tdm = new HashMap<>();
-        Map<String, Long> sm = new HashMap<>();
-        for (FastIndexMappingPo po : pos) {
-            MappingConfig mc = new MappingConfig(JSONObject.parseObject(po.getMapping()));
-
-            Map<String, Map<String, TypeDefine>> m = mc.getTypeDefines();
-            for (String type : m.keySet()) {
-                for (String field : m.get(type).keySet()) {
-                    String key = type + "." + field;
-                    TypeDefine td = m.get(type).get(field);
-
-                    if (!tdm.containsKey(key)) {
-                        tdm.put(key, td);
-                        sm.put(key, po.getReduceId());
-                    } else {
-
-                        if (!tdm.get(key).equals(td)) {
-                            throw new Exception("field not match, index:" + indexName +
-                                    ", reduce1:" + po.getReduceId() +
-                                    ", reduce2:" + sm.get(key) +
-                                    ", type:" + type +
-                                    ", field:" + field);
-                        }
-                    }
-                }
-            }
-        }
-
-        // 合并字段
-        MappingConfig mappingConfig = null;
-        for (FastIndexMappingPo po : pos) {
-            MappingConfig mc = new MappingConfig(JSONObject.parseObject(po.getMapping()));
-            if (mappingConfig == null) {
-                mappingConfig = mc;
-            } else {
-                mappingConfig.merge(mc);
-            }
-        }
-
-        return mappingConfig;
-    }
-
-    /*
      * 移除所有结束标记
-     * @param srcTag
      * @param template 模板名
      * @param time 分区时间
      */
-    public void removeFinishTag(String srcTag, String template, long time) throws Exception {
+    public void removeFinishTag(String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
 
-        if(!isFinish(srcTag, indexName)) {
+        if(!isFinish(indexName)) {
             return;
         }
 
         FastIndexOpIndexPo opIndexPo = new FastIndexOpIndexPo();
         opIndexPo.setIndexName(indexName);
-        opIndexPo.setSrcTag(srcTag);
         String key = opIndexPo.getKey();
 
         fastIndexOpIndexDao.delete(key);
@@ -359,32 +197,26 @@ public class FastIndexService {
 
     /*
      * 判断加载任务是否完成
-     * @param srcTag
      * @param template 模板名
      * @param time 分区时间
      */
-    public boolean isFinish(String srcTag, String template, long time) throws Exception {
+    public boolean isFinish(String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
-        return isFinish(srcTag, indexName);
+        return isFinish(indexName);
     }
 
     /*
      * 判断加载任务是否完成
-     * @param srcTag
      * @param template 模板名
      * @param time 分区时间
      */
-    private boolean isFinish(String srcTag, String indexName) {
+    private boolean isFinish(String indexName) throws Exception {
         List<FastIndexOpIndexPo> list = fastIndexOpIndexDao.getFinishedByIndexName(indexName);
         if(list==null || list.size()==0) {
             return false;
         }
 
         for(FastIndexOpIndexPo po : list) {
-            if(!equalTag(po.getSrcTag(), srcTag)) {
-                continue;
-            }
-
             if(po.isFinish()) {
                 return true;
             }
@@ -415,10 +247,11 @@ public class FastIndexService {
     }
 
     /* 获得索引名 */
-    private static final String DATE_FORMAT = "_yyyy-MM-dd";
+//    private static final String DATE_FORMAT = "_yyyy-MM-dd";
+    private static final String DATE_FORMAT = "_yyyyMMdd";
     private String getIndexName(String template, long time) {
-        SimpleDateFormat sdf = new SimpleDateFormat(template+DATE_FORMAT);
-        return sdf.format(time);
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        return template + sdf.format(time);
     }
 
     /* 获得索引配置 */
@@ -436,19 +269,6 @@ public class FastIndexService {
         }
 
         return indexConfig;
-    }
-
-    /* 对比srcTag */
-    private boolean equalTag(String tag1, String tag2) {
-        if (tag1 == null) {
-            if (tag2 == null) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return tag1.equals(tag2);
-        }
     }
 
     /* 确定expan factor */

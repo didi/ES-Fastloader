@@ -17,7 +17,6 @@ public class FastIndexLoadDataPo extends BasePo {
     private String hostName;            // shard属于的主机名
     private int port;                   // es http端口号
 
-    private String srcTag;              // srcTag，处理hive的不同分区同时导入同一个索引的情况
     private String redcueIds;           // 对应的reducer编号，会有多个
     private String hdfsSrcDir;          // hdfs上存放lucene文件的路径
     private String hdfsUser;            // hdfs用户名
@@ -31,22 +30,15 @@ public class FastIndexLoadDataPo extends BasePo {
     private boolean isFinish;           // zeus是否已经执行成功
     private long finishTime;            // zeus执行成功的时间
     private long runCount=0;            // zeus重试的次数
+    private long createTime;
 
     @JSONField(serialize = false)
     public String getOpKey() {
-        if (srcTag == null || srcTag.trim().length() == 0) {
-            return indexName;
-        } else {
-            return srcTag.trim() + "_" + indexName;
-        }
+        return indexName;
     }
 
     @Override
     public String getKey() {
-        if(srcTag==null || srcTag.trim().length()==0) {
-            return indexName + "_" + shardNum;
-        } else {
-            return srcTag.trim() + "_" + indexName + "_" + shardNum;
-        }
+        return indexName + "_" + shardNum;
     }
 }

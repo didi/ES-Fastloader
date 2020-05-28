@@ -2,6 +2,7 @@ package com.didichuxing.fastindex.dao;
 
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.didichuxing.fastindex.common.po.BasePo;
@@ -14,8 +15,8 @@ public class BaseEsDao {
     protected static final Logger logger = Logger.getLogger(BaseEsDao.class.getName());
     protected static final String TYPE_NAME = "type";
 
-    private String ip = "127.0.0.1";
-    private int port = 9300;
+    private String ip = "10.179.101.31";
+    private int port = 9200;
 
     /**
      * 批量写入
@@ -41,17 +42,21 @@ public class BaseEsDao {
         }
 
 
-        String result = HttpUtil.doHttpWithRetry(url, null, content, HttpUtil.HttpType.PUT, false, 5);
-        String str = result;
-        if (result.length() > 60) {
-            str = result.substring(0, 50);
-        }
+        String result = HttpUtil.doHttp(url, null, content, HttpUtil.HttpType.PUT);
+        if(result!=null) {
+            String str = result;
+            if (result.length() > 60) {
+                str = result.substring(0, 50);
+            }
 
-        // TODO 解析JSON，细化处理
-        if (str.contains("\"errors\":true") || str.contains("root_cause")) {
-            return false;
+            // TODO 解析JSON，细化处理
+            if (str.contains("\"errors\":true") || str.contains("root_cause")) {
+                return false;
+            } else {
+                return true;
+            }
         } else {
-            return true;
+            return false;
         }
     }
 
@@ -59,10 +64,34 @@ public class BaseEsDao {
     /**
      * 查询
      */
-    protected String query(String indexName, String dsl) {
+    protected String query(String indexName, String dsl) throws Exception {
         String url =  getUrlPrefix() + "/" + indexName.trim() + "/_search";
+        String ret = HttpUtil.doHttp(url,null,  dsl, HttpUtil.HttpType.GET);
 
-        return HttpUtil.doHttpWithRetry(url,null,  dsl, HttpUtil.HttpType.GET, false, 5);
+        if (ret == null) {
+            throw new Exception("query return null, indexName:" + indexName + ", dsl:" + dsl);
+        }
+
+        // 提取hit数据
+        JSONObject obj = JSON.parseObject(ret);
+        if(obj.getBoolean("timed_out")) {
+            throw new Exception("query time out, ret:" + ret);
+        }
+
+        JSONObject shard = obj.getJSONObject("_shards");
+        if(shard.getInteger("failed")>0) {
+            throw new Exception("query have failed shard");
+        }
+
+        JSONArray array = obj.getJSONObject("hits").getJSONArray("hits");
+
+        JSONArray a = new JSONArray();
+        for(Object o : array) {
+            JSONObject oj = (JSONObject) o;
+            a.add(oj.getJSONObject("_source"));
+        }
+
+        return a.toJSONString();
     }
 
     /**
@@ -70,7 +99,7 @@ public class BaseEsDao {
      */
     public void delete(String indexName, String typeName, String key) {
         String url =  getUrlPrefix() + "/" + indexName.trim() + "/" + typeName + "/" + key;
-        HttpUtil.doHttpWithRetry(url,null,  null, HttpUtil.HttpType.DELETE, false, 5);
+        HttpUtil.doHttp(url,null,  null, HttpUtil.HttpType.DELETE);
     }
 
 

@@ -3,8 +3,6 @@ package com.didichuxing.datachannel.arius.fastindex;
 import com.alibaba.fastjson.JSON;
 import com.didichuxing.datachannel.arius.fastindex.mapreduce.FastIndexMapper;
 import com.didichuxing.datachannel.arius.fastindex.mapreduce.FastIndexReducer;
-import com.didichuxing.datachannel.arius.fastindex.metrics.MetricService;
-import com.didichuxing.datachannel.arius.fastindex.remote.EnvEnum;
 import com.didichuxing.datachannel.arius.fastindex.remote.RemoteService;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.IndexInfo;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.TaskConfig;
@@ -61,17 +59,16 @@ public class FastIndex  extends Configured implements Tool {
                 LogUtils.info("taskConfig" + taskConfigStr);
                 taskConfig = TaskConfig.getTaskConfig(taskConfigStr);
                 taskConfig.check();
-                LogUtils.info("taskConfig" + JSON.toJSONString(taskConfig));
 
                 // 根据当前环境，配置server地址
-                RemoteService.setHost(EnvEnum.valueFrom(taskConfig.getEnv()), taskConfig.getSrcTag());
+                RemoteService.setHost(taskConfig.getHost());
 
                 // 如果任务已经结束，则清理finish标识，重新执行
                 if(RemoteService.loadDataIsFinish(taskConfig.getEsTemplate(), taskConfig.getTime())) {
                     LogUtils.info("remove template finish tag, template:" + taskConfig.getEsTemplate() + ", time:" + taskConfig.getTime());
                     RemoteService.removeFinishTag(taskConfig.getEsTemplate(), taskConfig.getTime());
                     // es需要时间刷新
-                    Thread.sleep(10000);
+                    Thread.sleep(10*1000);
                 }
 
                 if(RemoteService.loadDataIsFinish(taskConfig.getEsTemplate(), taskConfig.getTime())) {
@@ -115,23 +112,17 @@ public class FastIndex  extends Configured implements Tool {
 
                     // 清理数据，防止hdfs出现文件过多的情况
                     HdfsUtil.deleteDir(new Configuration(), taskConfig.getHdfsOutputPath());
-
-                    // 提交当前reducer的metric信息
-                    MetricService.sendMetric(taskConfig, startTime, System.currentTimeMillis());
                     LogUtils.info("################ Arius FastIndex finish");
                     return 0;
                 } else {
 
                     HdfsUtil.deleteDir(new Configuration(), taskConfig.getHdfsOutputPath());
-
                     String info = "################ MapReduce failed, job id:" + job.getJobID();
                     LogUtils.error(info);
-                    MetricService.sendError(taskConfig, info);
                     return -1;
                 }
             } catch (Throwable t) {
                 LogUtils.error("fast index catch exception, msg:" + t.getMessage(), t);
-                MetricService.sendError(taskConfig, t);
                 return -1;
 
             }
@@ -140,7 +131,7 @@ public class FastIndex  extends Configured implements Tool {
         // 配置mr参数
         private Job getHdfsJob(Configuration conf) throws Exception {
             Job job = Job.getInstance(conf, MAIN_CLASS);
-            job.setJobName("AriusFastIndex_" + taskConfig.getEsTemplate());
+            job.setJobName("DidiFastIndex_" + taskConfig.getEsTemplate());
             job.setJarByClass(FastIndex.class);
             job.setMapperClass(FastIndexMapper.class);
             job.setInputFormatClass(HCatInputFormat.class);

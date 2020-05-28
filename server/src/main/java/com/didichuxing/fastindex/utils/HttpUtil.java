@@ -29,36 +29,10 @@ public class HttpUtil {
         }
     }
 
-
-    public static String doHttpWithRetry(String url, JSONObject param, String body, HttpType httpType, boolean check, int maxRetry) {
-        while(maxRetry>0) {
-            maxRetry--;
-
-            try {
-                String result = doHttp(url, param, body, httpType, check);
-                if(result!=null) {
-                    return result;
-                }
-
-                log.error("do http get null, retry count:" + maxRetry);
-            } catch (Throwable t) {
-                log.error("do http get error, retry count:" + maxRetry, t);
-            }
-
-            try {
-                Thread.sleep(60000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return null;
-    }
-
-    private static String doHttp(String url, JSONObject param, String body, HttpType httpType, boolean check) {
+    public static String doHttp(String url, JSONObject param, String body, HttpType httpType) {
         String logInfo = "url:" + url + ", param:" + param + ", body:" + body + ", type:" + httpType.getType();
 
-        if(param!=null) {
+        if (param != null) {
             StringBuilder sb = new StringBuilder();
             for (String key : param.keySet()) {
                 sb.append(key).append("=").append(param.getString(key)).append("&");
@@ -75,38 +49,14 @@ public class HttpUtil {
         try {
             switch (httpType) {
                 case GET:
-                    result = HttpUtil.get(url);
-                    break;
-
+                    return HttpUtil.get(url);
                 case PUT:
-                    result = HttpUtil.putJsonEntity(url, body);
-                    break;
-
+                    return HttpUtil.putJsonEntity(url, body);
                 case POST:
-                    result = HttpUtil.postJsonEntity(url, body);
-                    break;
+                    return HttpUtil.postJsonEntity(url, body);
             }
 
-            if (result==null && result.trim().length()==0) {
-                return null;
-            }
-
-            if (!check) {
-                return result;
-            }
-
-            JSONObject jsonObject = JSONObject.parseObject(result);
-            if (jsonObject.getIntValue("code") != 0) {
-                return null;
-            }
-
-
-            String ret = jsonObject.getString("data");
-            if(ret==null) {
-                ret = "";
-            }
-
-            return ret;
+            return null;
         } catch (Throwable t) {
             return null;
         }

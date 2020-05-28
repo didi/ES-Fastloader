@@ -19,7 +19,6 @@ import java.util.*;
 
 
 // 负责处理各个shard的数据搬迁
-//JobHandler(value = "fastIndexLoadDataCollector")
 @Slf4j
 @Component
 public class FastIndexLoadDataCollector {
@@ -35,9 +34,8 @@ public class FastIndexLoadDataCollector {
 
     // 1.提高性能，合并单个节点的执行过程, 一个任务的带宽为50MB/s
     // 2.多次重试失败，则放弃，并告警
-    public void handleJobTask(String params) {
-        log.info("class=FastIndexLoadDataCollector ||method=handleJobTask||params={}", params);
-        FastIndexLoadDataParam param = JSON.parseObject(params, FastIndexLoadDataParam.class);
+    public void handleJobTask() throws Exception {
+        FastIndexLoadDataParam param = new FastIndexLoadDataParam();
 
         CocurrentLimiter limiter = new CocurrentLimiter(param.getMaxCocurrent(), param.getNodeMaxCocurrent());
         ShardLimiter shardLimiter = new ShardLimiter();
@@ -99,12 +97,10 @@ public class FastIndexLoadDataCollector {
             String clusterName = null;
             String templateName = null;
             String indexName = null;
-            String srcTag = null;
 
             for(FastIndexLoadDataPo po : allIndexMap.get(opKey)) {
                 templateName = po.getTemplateName();
                 indexName = po.getIndexName();
-                srcTag = po.getSrcTag();
                 if(!po.isFinish()) {
                     isFinish = false;
                 }
@@ -116,7 +112,6 @@ public class FastIndexLoadDataCollector {
                 FastIndexOpIndexPo opIndexPo = new FastIndexOpIndexPo();
                 opIndexPo.setTemplateName(templateName);
                 opIndexPo.setIndexName(indexName);
-                opIndexPo.setSrcTag(srcTag);
                 opIndexPo.setFinish(false);
                 opIndexPos.add(opIndexPo);
             }
@@ -178,7 +173,6 @@ public class FastIndexLoadDataCollector {
         }
     }
 
-    private static final long HIGH_ES_ZEUS_TEMPLATE_ID = 1246;
     private boolean startLoadData(FastIndexLoadDataPo po) {
         long taskId;
 
@@ -186,9 +180,6 @@ public class FastIndexLoadDataCollector {
             log.info("start load data, common:" + JSON.toJSONString(po));
 
             List<String> params = new ArrayList<>();
-            long zeusTemplaeId = 0;
-
-            zeusTemplaeId = HIGH_ES_ZEUS_TEMPLATE_ID;
             params.add(po.getHdfsSrcDir());
             params.add(po.getIndexName());
             params.add(po.getIndexUUID());
@@ -201,11 +192,7 @@ public class FastIndexLoadDataCollector {
             params.add("" + po.getPort());
 
             // 这里需要指定对用的用户名
-            String user = "root";
-
-            long timeout = 1200;
-
-            taskId = ZeusUtils.startTask(zeusTemplaeId, user, po.getHostName(), timeout, params);
+            taskId = ZeusUtils.startTask(po.getHostName(),  params);
 
             if (taskId <= 0) {
                 log.warn("zeus get wrong taskId, taskId:" + taskId + ", common:" + JSON.toJSONString(po));

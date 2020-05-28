@@ -9,14 +9,14 @@ import java.util.List;
 
 @Component
 public class FastIndexOpIndexDao extends BaseEsDao {
-    private static final String INDEX_NAME = "fast.index.op";
+    private static final String INDEX_NAME = "fast_index_op";
 
     public boolean batchInsert(List<FastIndexOpIndexPo> poList) {
         return batchInsert(INDEX_NAME, TYPE_NAME, poList);
     }
 
 
-    public List<FastIndexOpIndexPo> getUnFinished() {
+    public List<FastIndexOpIndexPo> getUnFinished() throws Exception {
         String dslFormat = "{\n" +
                 "  \"size\": 10000,\n" +
                 "  \"query\": {\n" +
@@ -37,7 +37,7 @@ public class FastIndexOpIndexDao extends BaseEsDao {
         delete(INDEX_NAME, TYPE_NAME, key);
     }
 
-    public List<FastIndexOpIndexPo> getFinishedByIndexName(String indexName) {
+    public List<FastIndexOpIndexPo> getFinishedByIndexName(String indexName) throws Exception {
         String dslFormat = "{\n" +
                 "  \"size\": 10000,\n" +
                 "  \"query\": {\n" +
@@ -64,6 +64,7 @@ public class FastIndexOpIndexDao extends BaseEsDao {
 
         String dsl = String.format(dslFormat, indexName);
         String source = query(INDEX_NAME, dsl);
+
         return JSON.parseArray(source, FastIndexOpIndexPo.class);
     }
 }

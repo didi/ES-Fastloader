@@ -3,7 +3,6 @@ package com.didichuxing.datachannel.arius.fastindex.es;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.didichuxing.datachannel.arius.fastindex.metrics.TaskMetrics;
 import com.didichuxing.datachannel.arius.fastindex.utils.HttpUtil;
 import com.didichuxing.datachannel.arius.fastindex.utils.LogUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +15,6 @@ import static com.didichuxing.datachannel.arius.fastindex.utils.HttpUtil.doHttpW
 /* 封装对ES的操作 */
 @Slf4j
 public class ESClient {
-    private TaskMetrics taskMetrics = new TaskMetrics();    // 统计信息
     public Integer port;                                    // ES的端口
     public String index;                                    // 操作的索引名
     public String type;                                     // 写入的type名
@@ -29,12 +27,6 @@ public class ESClient {
 
         LogUtils.info("esclient port:" + port + ", index:" + index + ", type:" + type);
     }
-
-    public TaskMetrics getTaskMetrics() {
-        return taskMetrics;
-    }
-
-
     /* 修改集群配置 */
     public void putClusterSetting(JSONObject param) {
         JSONObject body = new JSONObject();
@@ -138,7 +130,6 @@ public class ESClient {
         StringBuilder sb = new StringBuilder();
         for(IndexNode node : nodes) {
             if (node.key != null && node.key.getBytes(StandardCharsets.UTF_8).length >= 512) {
-                taskMetrics.addErrorRecords(1);
                 continue;
             }
 
@@ -157,10 +148,6 @@ public class ESClient {
             return;
         }
 
-
-        taskMetrics.addReadBytes(content.length());
-        taskMetrics.addReadRecords(nodes.size());
-
         String result = doHttpWithRetry(url, null, content, HttpUtil.HttpType.PUT, false, 5);
         String str = result;
         if(result.length()>60) {
@@ -175,12 +162,6 @@ public class ESClient {
 
                 isFirstError=false;
             }
-
-            // 统计错误条数 TODO 遍历数据，精细化
-            taskMetrics.addErrorRecords(nodes.size());
-
-        } else {
-            taskMetrics.addWriteRecords(nodes.size());
         }
 
         long cost = System.currentTimeMillis()-start;

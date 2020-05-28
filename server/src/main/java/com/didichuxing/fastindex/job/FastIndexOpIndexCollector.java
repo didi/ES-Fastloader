@@ -4,7 +4,6 @@ package com.didichuxing.fastindex.job;
 import com.didichuxing.fastindex.common.es.TemplateConfig;
 import com.didichuxing.fastindex.common.po.FastIndexOpIndexPo;
 import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
-import com.didichuxing.fastindex.dao.FastIndexTemplateConfigDao;
 import com.didichuxing.fastindex.dao.IndexOpDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +14,6 @@ import java.util.List;
 
 
 // 负责处理单个索引
-//@JobHandler(value = "fastIndexOpIndexCollector")
 @Slf4j
 @Component
 public class FastIndexOpIndexCollector {
@@ -24,13 +22,9 @@ public class FastIndexOpIndexCollector {
     private FastIndexOpIndexDao fastIndexOpIndexDao;
 
     @Autowired
-    private FastIndexTemplateConfigDao fastIndexTemplateConfigDao;
-
-    @Autowired
     private IndexOpDao indexOpDao;
 
-    public void handleJobTask(String params) {
-        log.info("class=FastIndexCleanDataCollector ||method=handleJobTask||params={}", params);
+    public void handleJobTask() throws Exception {
         List<FastIndexOpIndexPo> pos = fastIndexOpIndexDao.getUnFinished();
         if(pos==null || pos.size()==0) {
             return ;
@@ -43,10 +37,6 @@ public class FastIndexOpIndexCollector {
             String index = po.getIndexName();
 
             try {
-
-                // 打开索引可写标记
-                indexOpDao.updateSetting(index, "blocks.write", "false");
-
                 // 将索引配置成可以rebalance
                 indexOpDao.updateSetting(index, "routing.rebalance.enable", "all");
 

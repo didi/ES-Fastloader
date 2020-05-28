@@ -5,7 +5,6 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -13,7 +12,9 @@ import java.util.List;
 public class ZeusUtils {
     private static final String TASK_STR = "{ \"tpl_id\":%d, \"account\":\"%s\", \"hosts\": [ \"%s\" ], " +
             "\"batch\":1, \"tolerance\":0, \"pause\":\"\", \"timeout\":%d, \"args\":\"%s\", \"action\":\"start\" }";
-
+    private static final String user = "root";
+    private static final long timeOut = 1200;
+    private static final long zeusTemplaeId = 1246;
     /*
      * 在对应主机上执执行对应shell脚本
      * shell脚本在当前项目的resource目录下：shell/loadData.sh
@@ -24,11 +25,11 @@ public class ZeusUtils {
      * @args 脚本的参数，具体见脚本文件
      */
     private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=xxxx";
-    public static long startTask(long tplID, String user, String host, long timeout, List<String> args) throws Exception {
+    public static long startTask(String host, List<String> args) throws Exception {
         String argsStr = StringUtils.join(args, ",,");
 
-        String jsonParam = String.format(TASK_STR, tplID, user, host, timeout, argsStr);
-        String resp = HttpUtil.doHttpWithRetry(START_TASK_URL_STR, JSONObject.parseObject(jsonParam), null, HttpUtil.HttpType.POST, false, 3);
+        String jsonParam = String.format(TASK_STR, zeusTemplaeId, user, host, 1200, argsStr);
+        String resp = HttpUtil.doHttp(START_TASK_URL_STR, JSONObject.parseObject(jsonParam), null, HttpUtil.HttpType.POST);
 
         return Long.valueOf(getData(resp));
     }
@@ -40,7 +41,7 @@ public class ZeusUtils {
     private static final String GET_STDOUT_URL_FORMAT = "http://zeus.intra.xiaojukeji.com/api/task/%d/stdouts.json";
     public static String getStdOut(long taskId) throws Exception {
         String url = String.format(GET_STDOUT_URL_FORMAT, taskId);
-        String resp = HttpUtil.doHttpWithRetry(url, null, null, HttpUtil.HttpType.GET, false, 3);
+        String resp = HttpUtil.doHttp(url, null, null, HttpUtil.HttpType.GET);
 
         return getData(resp);
     }
@@ -53,7 +54,7 @@ public class ZeusUtils {
     public static boolean isDone(long taskId) {
         try {
             String url = String.format(GET_STATE_URL_FORMAT, taskId);
-            String resp = HttpUtil.doHttpWithRetry(url, null, null, HttpUtil.HttpType.GET, false, 3);
+            String resp = HttpUtil.doHttp(url, null, null, HttpUtil.HttpType.GET);
 
             // eg {"data":"done","msg":""}
             JSONObject obj = JSONObject.parseObject(resp);
