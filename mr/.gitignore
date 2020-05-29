@@ -42,3 +42,5 @@ polaris-agent/*.project
 polaris-agent/polaris-agent-api/*.classpath
 polaris-agent/polaris-agent-api/*.project
 .DS_Store
+
+src/main/resources/elasticsearch-6.6.1.zip

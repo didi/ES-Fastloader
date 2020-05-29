@@ -1,10 +1,25 @@
 package com.didichuxing.datachannel.arius.fastindex.utils;
 
+import com.alibaba.fastjson.JSON;
+import com.didichuxing.datachannel.arius.fastindex.FastIndex;
+import com.didichuxing.datachannel.arius.fastindex.mapreduce.FastIndexMapper;
+import com.didichuxing.datachannel.arius.fastindex.mapreduce.FastIndexReducer;
+import com.didichuxing.datachannel.arius.fastindex.remote.config.IndexInfo;
+import com.didichuxing.datachannel.arius.fastindex.remote.config.TaskConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hive.hcatalog.data.DefaultHCatRecord;
+import org.apache.hive.hcatalog.mapreduce.HCatInputFormat;
 
 import java.io.*;
 
@@ -13,6 +28,74 @@ import java.io.*;
  */
 @Slf4j
 public class HdfsUtil {
+
+
+    // 配置mr参数
+    private static final String MAIN_CLASS = "FastIndex";
+    public static Job getHdfsJob(Configuration conf, TaskConfig taskConfig, IndexInfo indexInfo) throws Exception {
+        Job job = Job.getInstance(conf, MAIN_CLASS);
+        job.setJobName("DidiFastIndex_" + taskConfig.getEsTemplate());
+        job.setJarByClass(FastIndex.class);
+        job.setMapperClass(FastIndexMapper.class);
+        job.setInputFormatClass(HCatInputFormat.class);
+        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputValueClass(DefaultHCatRecord.class);
+        HCatInputFormat.setInput(job, taskConfig.getHiveDB(), taskConfig.getHiveTable(), taskConfig.getFilterStr());
+
+        job.setReducerClass(FastIndexReducer.class);
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(NullWritable.class);
+        job.setNumReduceTasks(indexInfo.getReduceNum());
+        job.setOutputFormatClass(TextOutputFormat.class);
+        FileOutputFormat.setOutputPath(job, new Path(taskConfig.getHdfsMROutputPath()));
+
+        return job;
+    }
+
+    // 配置mr参数
+    public static Configuration setHdfsConfig(Configuration conf, TaskConfig taskConfig, IndexInfo indexInfo) {
+        conf.set(TaskConfig.TASKCONFIG, JSON.toJSONString(taskConfig));
+        conf.set(IndexInfo.INDEX_CONFIG, JSON.toJSONString(indexInfo));
+
+        conf.setBoolean("mapreduce.map.output.compress", true); //设置map输出压缩
+        conf.setClass(Job.MAP_OUTPUT_COMPRESS_CODEC, GzipCodec.class, CompressionCodec.class);
+
+        conf.set("mapreduce.user.classpath.first", "true");     //设置优先使用用户classpath
+        conf.set("mapred.task.timeout", "8000000");             //毫秒, 默认10分钟, 加长是防止copy es数据时间过短
+        conf.set("mapreduce.map.memory.mb", "6144");            // 单个map任务最多6G
+        conf.set("mapreduce.reduce.memory.mb", "15360");        // 单个reducer任务最多15G
+
+        conf.set("mapreduce.map.java.opts", "-Xmx4096m");
+        conf.set("mapreduce.reduce.java.opts", "-Xmx2048m");
+
+        conf.set("mapreduce.map.cpu.vcores", "4");
+        conf.set("mapreduce.reduce.cpu.vcores", "6");
+
+        // 关闭MR推测执行策略
+        conf.setBoolean("mapreduce.map.speculative", false);
+        conf.setBoolean("mapreduce.reduce.speculative", false);
+
+        conf.set("mapreduce.job.running.map.limit", "1000");
+        conf.set("mapreduce.job.running.reduce.limit", "2500"); //调大reduce同时执行个数
+        conf.set("mapreduce.task.io.sort.mb", "1024");
+        conf.set("dfs.datanode.max.transfer.threads", "8192");
+        conf.set("mapreduce.tasktracker.http.threads", "1000");
+        conf.set("mapreduce.shuffle.max.threads", "50");
+        conf.set("mapreduce.reduce.shuffle.parallelcopies", "500");
+        conf.set("mapreduce.task.io.sort.factor", "500");
+        conf.set("mapreduce.job.reduce.slowstart.completedmaps", "0.01");
+
+        conf.set("dfs.datanode.handler.count", "20");
+
+        conf.set("yarn.app.mapreduce.am.resource.mb", "8192");
+        conf.set("yarn.app.mapreduce.am.command-opts", "-Djava.net.preferIPv4Stack=true -Xmx8192m -Xms8192m -XX:+PrintGCDetails -Xloggc:gc.log -XX:+PrintGCTimeStamps");
+
+        conf.set("mapreduce.map.maxattempts", "4");
+        conf.set("mapred.job.queue.name", taskConfig.getMrqueue());
+
+        return conf;
+    }
+
 
     /**
      * 删除hdfs文件夹

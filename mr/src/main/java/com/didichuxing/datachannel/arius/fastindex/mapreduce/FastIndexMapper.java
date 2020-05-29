@@ -59,10 +59,10 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
 
         List<String> keyList = taskConfig.getKeyList();
         if(keyList==null || keyList.size()==0) {
-            shardNo = (int) (Math.random()*templateConfig.getReduceNum());
+            shardNo = (int) (Math.random()*templateConfig.getReducerNum());
         } else {
             String keyStr = getKeyValue(keyList, hCatRecord);
-            shardNo = CommonUtils.getShardId(keyStr, templateConfig.getReduceNum());
+            shardNo = CommonUtils.getShardId(keyStr, templateConfig.getReducerNum());
         }
 
         //shard分片个数与reduce个数一样

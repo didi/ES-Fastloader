@@ -29,11 +29,10 @@ public class RemoteService {
      * 对应代码，server模块中的com.didichuxing.fastindex.controller.getIndexInfo()函数
      */
     private static final String GET_TEMPLATE_PATH = "fastindex/getIndexInfo.do";
-    public static IndexInfo getIndexConfig(String template, long time, long hdfsSize) {
+    public static IndexInfo getIndexConfig(String template, long time) {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
-        param.put("hdfsSize", hdfsSize);
 
         String url = String.format(URL_FORMAT_STR, HOST_STR, GET_TEMPLATE_PATH);
         LogUtils.info("send http, url:" + url + ", param:" + param.toJSONString());
@@ -52,12 +51,12 @@ public class RemoteService {
      * 对应代码，server模块中的com.didichuxing.fastindex.controller.startLoadData()函数
      */
     private static final String START_LOAD_PATH = "fastindex/startLoadData.do";
-    public static String startLoadData(String template, long time, String hdfsDir, long expanfactor, String user, String passwd) {
+    public static String startLoadData(String template, long time, String hdfsDir, long reducerNum, String user, String passwd) {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
+        param.put("reducerNum", reducerNum);
         param.put("hdfsDir", hdfsDir);
-        param.put("expanFactor", expanfactor);
         param.put("hdfsUser", user);
         param.put("hdfsPasswd", passwd);
 

@@ -22,46 +22,38 @@ import java.util.*;
 public class TaskConfig {
     public static final String TASKCONFIG = "taskConfig";
 
-    private long taskId;                // 任务id
-
-    private String hdfsInputPath;       // hive表对应的hdfs路径, 用于获得Hive数据大小
-    private String hiveDB;              // hive库名
-    private String hiveTable;           // hive表名
-    private String hiveColumns;         // hive表结构
-    private Set<String>  intColumns = new HashSet<>();  // hive表中，类型为int的字段名集合
-
     private String esTemplate;          // es模板名
-
-    private String key;                 // es索引主键名，多个字段名以逗号分隔
-
-    private Map<String, String> filter; // hive的过滤字段以及对应的value
     private long time;                  // es索引分区时间
 
+    private String hiveDB;              // hive库名
+    private String hiveTable;           // hive表名
+    private String key;                 // es索引主键名，多个字段名以逗号分隔
+    private Map<String, String> filter; // hive的过滤字段以及对应的value
+    private String mrqueue;             // hive计算队列
     private String hdfsOutputPath;      // reducer产生的lucene文件在hdfs上的存储路径
-
     private String user;                // hive用户名
     private String passwd;              // hive密码
 
-    private String mrqueue;             // hive计算队列
 
-    private String host = "127.0.0.1:9200";      // 服务端地址
+    private String host;                // 服务端地址
     private Integer batchSize = 500;    // reducer任务中单次写入es的数据个数
     private Integer threadPoolSize = 4; // reducer任务中写入线程个数
 
     @JSONField(serialize = false)
     public void check() throws Exception {
-        if(StringUtils.isBlank(hiveDB) ||
+        if (StringUtils.isBlank(hiveDB) ||
                 StringUtils.isBlank(hiveTable) ||
                 StringUtils.isBlank(esTemplate) ||
                 StringUtils.isBlank(hdfsOutputPath) ||
                 StringUtils.isBlank(user) ||
                 StringUtils.isBlank(passwd) ||
                 StringUtils.isBlank(mrqueue) ||
-                time<=0) {
+                StringUtils.isBlank(host) ||
+                time <= 0) {
             throw new Exception("param is wrong");
         }
 
-        if(!StringUtils.isBlank(key)) {
+        if (!StringUtils.isBlank(key)) {
             List<String> keyList = getKeyList();
             if (keyList == null || keyList.size() == 0) {
                 throw new Exception("key is blank, key:" + key);
@@ -74,37 +66,18 @@ public class TaskConfig {
             }
         }
 
-        if(hdfsOutputPath.endsWith("/")) {
-            hdfsOutputPath = hdfsOutputPath.substring(0, hdfsOutputPath.length()-1);
+        if (hdfsOutputPath.endsWith("/")) {
+            hdfsOutputPath = hdfsOutputPath.substring(0, hdfsOutputPath.length() - 1);
         }
 
         // 拼接实际使用的路径
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-        String pathtag = esTemplate.trim() +"_"+ dateFormat.format(time);
-        if(pathtag.length()>100) {
+        String pathtag = esTemplate.trim() + "_" + dateFormat.format(time);
+        if (pathtag.length() > 100) {
             pathtag = pathtag.substring(0, 100);
         }
 
         hdfsOutputPath = hdfsOutputPath + "/" + pathtag;
-
-
-        // 解析表结构，提取数据类型的字段
-        try {
-            JSONArray jsonArray = JSONArray.parseArray(hiveColumns);
-            for (Object obj : jsonArray) {
-                JSONObject columnObj = (JSONObject) obj;
-                String name = columnObj.getString("name");
-                String type = columnObj.getString("type");
-
-                if("int".equals(type) || "bigint".equals(type)) {
-                    intColumns.add(name);
-                }
-            }
-
-            LogUtils.info("intColumns:" + intColumns);
-        } catch (Throwable t) {
-            LogUtils.error("解析hive column报错, hiveColums:" + hiveColumns, t);
-        }
     }
 
     @JSONField(serialize = false)
@@ -146,26 +119,15 @@ public class TaskConfig {
 
                 String str = "( ";
                 for(String v : values) {
-                    if (intColumns.contains(key)) {
-                        str = str + key + "=" + v;
-                    } else {
-                        str = str + key + "='" + v  + "'";
-                    }
-
+                    str = str + key + "='" + v  + "'";
                     str = str + " or ";
                 }
                 str = str.substring(0, str.length()-4);
-
                 str = str + " )";
                 sb.append(str);
 
             } else {
-                if (intColumns.contains(key)) {
-                    sb.append(key).append("=").append(filter.get(key));
-
-                } else {
-                    sb.append(key).append("=").append("'").append(filter.get(key)).append("'");
-                }
+                sb.append(key).append("=").append("'").append(filter.get(key)).append("'");
             }
 
             sb.append(" and ");
@@ -174,15 +136,6 @@ public class TaskConfig {
         String ret = sb.substring(0, sb.length()-5);
         LogUtils.info("filter :" + ret);
         return ret;
-    }
-
-    @JSONField(serialize = false)
-    public long getHdfsSize() {
-        if(hdfsInputPath==null || hdfsInputPath.trim().length()==0) {
-            return -1;
-        }
-
-        return HdfsUtil.getSize(new Configuration(), hdfsInputPath);
     }
 
     public static TaskConfig getTaskConfig(JobContext context) {
