@@ -10,7 +10,6 @@ import com.didichuxing.fastindex.common.po.FastIndexOpIndexPo;
 import com.didichuxing.fastindex.dao.FastIndexLoadDataDao;
 import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
 import com.didichuxing.fastindex.dao.IndexOpDao;
-import com.didichuxing.fastindex.utils.SizeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +25,8 @@ import java.util.Map;
 @Slf4j
 @Service("fastIndexService")
 public class FastIndexService {
+    public static int EXPANFACTOR = 20;
+
     @Autowired
     private FastIndexLoadDataDao fastIndexLoadDataDao;
 
@@ -42,7 +43,7 @@ public class FastIndexService {
      * @param hdfsSize hive数据大小，用于确定expandFactor
      *
      */
-    public IndexFastIndexInfo getIndexConfig(String template, long time, long hdfsSize) throws Exception {
+    public IndexFastIndexInfo getIndexConfig(String template, long time) throws Exception {
         String indexName = getIndexName(template, time);
 
         // 获得索引配置
@@ -59,14 +60,13 @@ public class FastIndexService {
         }
 
         // 确定reducer任务使用的索引的setting
-        Map<String, String> settings = indexConfig.getSettings();
-        long shardNum = Long.valueOf(settings.get("index.number_of_shards"));
+        IndexFastIndexInfo indexFastIndexInfo = new IndexFastIndexInfo();
 
+        Map<String, String> settings = indexConfig.getSettings();
         settings.put("index.number_of_shards", "1");
         settings.put("index.number_of_replicas", "0");
         settings.put("index.refresh_interval", "-1");
         settings.put("index.merge.scheduler.max_thread_count", "1");
-
         settings.remove("index.routing.allocation.include.rack");
         settings.remove("index.blocks.write");
         settings.remove("index.creation_date");
@@ -76,14 +76,12 @@ public class FastIndexService {
         settings.remove("index.group.factor");
         settings.remove("index.group.name");
         settings.remove("index.template");
-
         indexConfig.setSettings(settings);
-        IndexFastIndexInfo indexFastIndexInfo = new IndexFastIndexInfo();
         indexFastIndexInfo.setIndexConfig(indexConfig);
 
-        int expanFactor = decideExpanFactor(shardNum, hdfsSize);
-        indexFastIndexInfo.setReduceNum(shardNum * expanFactor);
-        indexFastIndexInfo.setExpanfactor(expanFactor);
+        long shardNum = Long.valueOf(settings.get("index.number_of_shards"));
+        indexFastIndexInfo.setReducerNum(shardNum * EXPANFACTOR);
+
         return indexFastIndexInfo;
     }
 
@@ -96,7 +94,7 @@ public class FastIndexService {
      * @param hdfsUser hdfs用户名
      * @param hdfsPasswd hdfs密码
      */
-    public void startLoadData(String template, long time, String hdfsDir, int expanFactor, String hdfsUser, String hdfsPasswd) throws Exception {
+    public void startLoadData(String template, long time, String hdfsDir, int reducerNum, String hdfsUser, String hdfsPasswd) throws Exception {
         String indexName = getIndexName(template, time);
 
         // 判断索引是否完成
@@ -106,7 +104,6 @@ public class FastIndexService {
 
         // 将副本数改为0个，如果副本数目>0,当前架构下，会有问题，只会迁移一个副本的数据
         indexOpDao.updateSetting(indexName, "number_of_replicas", "0");
-
         // 将索引配置成不可以rebalance
         indexOpDao.updateSetting(indexName, "routing.rebalance.enable", "none");
 
@@ -119,9 +116,7 @@ public class FastIndexService {
         // 计算hdfsShard和ESShard的映射关系
         Map<Long/*esShard*/, List<Integer/*hdfsShard*/>> shardMap = new HashMap<>();
         int esShardNum = resp.getShards().size();
-        int reduceNum = expanFactor * esShardNum;
-
-        for (int reduceId = 0; reduceId < reduceNum; reduceId++) {
+        for (int reduceId = 0; reduceId < reducerNum; reduceId++) {
             long esShard = reduceId% esShardNum;
 
             if (!shardMap.containsKey(esShard)) {
@@ -163,9 +158,9 @@ public class FastIndexService {
                 fastIndexLoadDataPo.setHdfsUser(hdfsUser);
                 fastIndexLoadDataPo.setHdfsPassword(hdfsPasswd);
                 fastIndexLoadDataPo.setHdfsSrcDir(getHdfsPath(hdfsDir));
-                fastIndexLoadDataPo.setEsDstDir(getEsPathFor661(uuid, es.getShard()));
                 fastIndexLoadDataPo.setStart(false);
                 fastIndexLoadDataPo.setFinish(false);
+
                 fastIndexLoadDataPos.add(fastIndexLoadDataPo);
             }
         }
@@ -234,18 +229,6 @@ public class FastIndexService {
         return rootPath;
     }
 
-    /* 获得shard对应点存放路径 */
-    private static final String ES_PATH_FORMAT_661 = "/data1/es/nodes/0/indices/%s/%d";
-    private String getEsPathFor661(String uuid, long shardId) {
-        return String.format(ES_PATH_FORMAT_661, uuid, shardId);
-    }
-
-    /* 获得数据加载脚本的工作路径 */
-    private static final String WORK_DIR_FORMAT = "/data1/es/fastIndex/%s_shard%d";
-    public static String getWorkDir(String index, long shardNum) {
-        return String.format(WORK_DIR_FORMAT, index, shardNum);
-    }
-
     /* 获得索引名 */
 //    private static final String DATE_FORMAT = "_yyyy-MM-dd";
     private static final String DATE_FORMAT = "_yyyyMMdd";
@@ -271,27 +254,4 @@ public class FastIndexService {
         return indexConfig;
     }
 
-    /* 确定expan factor */
-    public static int EXPANFACTOR = 20;
-    public int decideExpanFactor(long shardNum, long hdfsSize) {
-        if(hdfsSize<=0) {
-            return EXPANFACTOR;
-        }
-
-        long _1G = SizeUtil.getUnitSize("1g");
-
-        // hdfs和es数据大小为 1:20
-        long esSize = hdfsSize*20;
-
-        // 单个reducer最多处理1g数据
-        long reducerNum = esSize/_1G;
-
-        int expanFactor = (int) (reducerNum/shardNum) + 1;
-
-        if(expanFactor>EXPANFACTOR) {
-            expanFactor = EXPANFACTOR;
-        }
-
-        return expanFactor;
-    }
 }

@@ -34,7 +34,7 @@ public class FastIndex extends Configured implements Tool {
             taskConfig = getTaskConfig(args);
 
             // 根据当前环境，配置server地址
-            RemoteService.setHost(taskConfig.getHost());
+            RemoteService.setHost(taskConfig.getServer());
 
             if (RemoteService.loadDataIsFinish(taskConfig.getEsTemplate(), taskConfig.getTime())) {
                 throw new Exception("template finish, template:" + taskConfig.getEsTemplate() + ", time:" + taskConfig.getTime());

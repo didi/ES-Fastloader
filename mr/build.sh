@@ -1,12 +1,11 @@
 #!/bin/sh
 
-cd src/main/resources 
 
-if [ ! -f "elasticsearch-6.6.1.zip" ];then
-zip -r elasticsearch-6.6.1.zip elasticsearch-6.6.1
+if [ ! -f "src/main/resources/elasticsearch-6.6.1.zip" ];then
+zip -r src/main/resources/elasticsearch-6.6.1.zip elasticsearch-6.6.1
 fi
 
-pwd
+mvn clean package -Dmaven.test.skip
 
-cd -
 
+mv target/mr-1.0.0-SNAPSHOT-with-dep.jar ./mr.jar

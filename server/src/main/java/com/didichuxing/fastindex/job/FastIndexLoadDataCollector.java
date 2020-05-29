@@ -9,7 +9,6 @@ import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
 import com.didichuxing.fastindex.dao.IndexOpDao;
 import com.didichuxing.fastindex.job.limiter.CocurrentLimiter;
 import com.didichuxing.fastindex.job.limiter.ShardLimiter;
-import com.didichuxing.fastindex.server.FastIndexService;
 import com.didichuxing.fastindex.utils.ZeusUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -184,7 +183,7 @@ public class FastIndexLoadDataCollector {
             params.add(po.getIndexName());
             params.add(po.getIndexUUID());
             params.add("" + po.getShardNum());
-            params.add(FastIndexService.getWorkDir(po.getIndexName(), po.getShardNum()));
+            params.add(getWorkDir(po.getIndexName(), po.getShardNum()));
             params.add(po.getRedcueIds());
             params.add("_uid");     // 固定使用es内部的_uid;
             params.add(po.getHdfsUser());
@@ -209,5 +208,12 @@ public class FastIndexLoadDataCollector {
         po.setStartTime(System.currentTimeMillis());
         po.setRunCount(po.getRunCount()+1);
         return true;
+    }
+
+    /* 获得数据加载脚本的工作路径 */
+    /* FIXME   */
+    private static final String WORK_DIR_FORMAT = "/data1/es/fastIndex/%s_shard%d";
+    public static String getWorkDir(String index, long shardNum) {
+        return String.format(WORK_DIR_FORMAT, index, shardNum);
     }
 }

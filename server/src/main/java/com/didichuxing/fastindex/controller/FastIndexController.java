@@ -16,10 +16,9 @@ public class FastIndexController {
 
     @RequestMapping(path = "/getIndexInfo.do", method = RequestMethod.GET)
     public Result<JSONObject> getIndexInfo(@RequestParam(value = "template", required=true) String template,
-                                           @RequestParam(value = "time", required=true) long time,
-                                           @RequestParam(value = "hdfsSize", required=false, defaultValue="-1") long hdfsSize) {
+                                           @RequestParam(value = "time", required=true) long time) {
         try {
-            IndexFastIndexInfo info = fastIndexService.getIndexConfig(template, time, hdfsSize);
+            IndexFastIndexInfo info = fastIndexService.getIndexConfig(template, time);
             return new Result<>(info.toJson());
         } catch (Throwable t) {
             return new Result<>(ResultType.FAIL, t.getMessage());
@@ -30,11 +29,11 @@ public class FastIndexController {
     public Result<String> startLoadData(@RequestParam(value = "template", required=true) String template,
                                         @RequestParam(value = "time", required=true) long time,
                                         @RequestParam(value = "hdfsDir", required=true) String hdfsDir,
-                                        @RequestParam(value = "expanFactor", required=true) int expanFactor,
+                                        @RequestParam(value = "reducerNum", required=true) int reducerNum,
                                         @RequestParam(value = "hdfsUser", required=true) String hdfsUser,
                                         @RequestParam(value = "hdfsPasswd", required=true) String hdfsPasswd) {
         try {
-            fastIndexService.startLoadData(template, time, hdfsDir, expanFactor, hdfsUser, hdfsPasswd);
+            fastIndexService.startLoadData(template, time, hdfsDir, reducerNum, hdfsUser, hdfsPasswd);
             return new Result<>(ResultType.SUCCESS);
         } catch (Throwable t) {
             return new Result<>(ResultType.FAIL, t.getMessage());

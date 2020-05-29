@@ -44,7 +44,7 @@ public class FastIndexMapper extends Mapper<Object, HCatRecord, IntWritable, Def
             }
 
             templateConfig = IndexInfo.getIndexInfo(context);
-            RemoteService.setHost(taskConfig.getHost());
+            RemoteService.setHost(taskConfig.getServer());
 
             LogUtils.info("map setup finish...");
         } catch (Throwable t) {

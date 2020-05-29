@@ -45,7 +45,7 @@ public class HdfsUtil {
         job.setReducerClass(FastIndexReducer.class);
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(NullWritable.class);
-        job.setNumReduceTasks(indexInfo.getReduceNum());
+        job.setNumReduceTasks(indexInfo.getReducerNum());
         job.setOutputFormatClass(TextOutputFormat.class);
         FileOutputFormat.setOutputPath(job, new Path(taskConfig.getHdfsMROutputPath()));
 

@@ -1,15 +1,11 @@
 package com.didichuxing.datachannel.arius.fastindex.remote.config;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
-import com.didichuxing.datachannel.arius.fastindex.utils.HdfsUtil;
 import com.didichuxing.datachannel.arius.fastindex.utils.LogUtils;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.conf.Configuration;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -35,7 +31,7 @@ public class TaskConfig {
     private String passwd;              // hive密码
 
 
-    private String host;                // 服务端地址
+    private String server;                // 服务端地址
     private Integer batchSize = 500;    // reducer任务中单次写入es的数据个数
     private Integer threadPoolSize = 4; // reducer任务中写入线程个数
 
@@ -48,7 +44,7 @@ public class TaskConfig {
                 StringUtils.isBlank(user) ||
                 StringUtils.isBlank(passwd) ||
                 StringUtils.isBlank(mrqueue) ||
-                StringUtils.isBlank(host) ||
+                StringUtils.isBlank(server) ||
                 time <= 0) {
             throw new Exception("param is wrong");
         }

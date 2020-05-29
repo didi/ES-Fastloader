@@ -20,7 +20,7 @@ public class ZeusUtils {
      * shell脚本在当前项目的resource目录下：shell/loadData.sh
      * @tplID 脚本id
      * @user 执行脚本的用户名
-     * @host 执行脚本的主键名
+     * @server 执行脚本的主键名
      * @timeout 执行超时时间
      * @args 脚本的参数，具体见脚本文件
      */

@@ -20,7 +20,7 @@ public class RemoteService {
 
     public static void setHost(String host) {
         HOST_STR = host;
-        LogUtils.info("host:" + HOST_STR);
+        LogUtils.info("server:" + HOST_STR);
     }
 
 
