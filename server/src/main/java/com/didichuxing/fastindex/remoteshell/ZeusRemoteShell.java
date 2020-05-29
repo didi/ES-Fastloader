@@ -25,7 +25,7 @@ public class ZeusRemoteShell implements RemoteShell {
          * @timeout 执行超时时间
          * @args 脚本的参数，具体见脚本文件
          */
-        private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=ef0d273c39fd177ba8c6c91812654384";
+        private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=xxx";
         @Override
         public long startShell(String host, List<String> args) throws Exception {
                 host = host+".docker.ys";

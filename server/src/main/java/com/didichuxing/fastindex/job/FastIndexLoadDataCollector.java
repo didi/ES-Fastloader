@@ -188,10 +188,8 @@ public class FastIndexLoadDataCollector {
             params.add(getWorkDir(po.getEsWordDir(), po.getIndexName(), po.getShardNum()));
             params.add(po.getRedcueIds());
             params.add("_uid");     // 固定使用es内部的_uid;
-//            params.add(po.getHdfsUser());
-//            params.add(po.getHdfsPassword());
-            params.add("prod_arius_es");
-            params.add("VthoTKeeMxAVHLULuPYA90O1lPhN3kwN");
+            params.add(po.getHdfsUser());
+            params.add(po.getHdfsPassword());
             params.add("" + po.getPort());
 
             // 这里需要指定对用的用户名
