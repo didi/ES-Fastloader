@@ -8,4 +8,4 @@ fi
 mvn clean package -Dmaven.test.skip
 
 
-mv target/mr-1.0.0-SNAPSHOT-with-dep.jar ./mr.jar
+mv target/fast-index-server-with-dep.jar ./mr.jar

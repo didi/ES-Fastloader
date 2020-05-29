@@ -185,11 +185,13 @@ public class FastIndexLoadDataCollector {
             params.add(po.getIndexName());
             params.add(po.getIndexUUID());
             params.add("" + po.getShardNum());
-            params.add(po.getEsWordDir());
+            params.add(getWorkDir(po.getEsWordDir(), po.getIndexName(), po.getShardNum()));
             params.add(po.getRedcueIds());
             params.add("_uid");     // 固定使用es内部的_uid;
-            params.add(po.getHdfsUser());
-            params.add(po.getHdfsPassword());
+//            params.add(po.getHdfsUser());
+//            params.add(po.getHdfsPassword());
+            params.add("prod_arius_es");
+            params.add("VthoTKeeMxAVHLULuPYA90O1lPhN3kwN");
             params.add("" + po.getPort());
 
             // 这里需要指定对用的用户名
@@ -213,9 +215,8 @@ public class FastIndexLoadDataCollector {
     }
 
     /* 获得数据加载脚本的工作路径 */
-    /* FIXME   */
-    private static final String WORK_DIR_FORMAT = "/data1/es/fastIndex/%s_shard%d";
-    public static String getWorkDir(String index, long shardNum) {
-        return String.format(WORK_DIR_FORMAT, index, shardNum);
+    private static final String WORK_DIR_FORMAT = "%s/%s_shard%d";
+    public static String getWorkDir(String worddir, String index, long shardNum) {
+        return String.format(WORK_DIR_FORMAT, worddir, index, shardNum);
     }
 }

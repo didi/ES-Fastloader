@@ -37,13 +37,15 @@ public class TaskConfig {
 
     @JSONField(serialize = false)
     public void check() throws Exception {
-        if (StringUtils.isBlank(hiveDB) ||
+        if (StringUtils.isBlank(esTemplate) ||
+                StringUtils.isBlank(hiveDB) ||
                 StringUtils.isBlank(hiveTable) ||
-                StringUtils.isBlank(esTemplate) ||
+                StringUtils.isBlank(key) ||
+                StringUtils.isBlank(mrqueue) ||
                 StringUtils.isBlank(hdfsOutputPath) ||
                 StringUtils.isBlank(user) ||
                 StringUtils.isBlank(passwd) ||
-                StringUtils.isBlank(mrqueue) ||
+                StringUtils.isBlank(esWorkDir) ||
                 StringUtils.isBlank(server) ||
                 time <= 0) {
             throw new Exception("param is wrong");

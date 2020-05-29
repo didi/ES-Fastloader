@@ -25,7 +25,7 @@ import java.util.Map;
 @Slf4j
 @Service("fastIndexService")
 public class FastIndexService {
-    public static int EXPANFACTOR = 20;
+    public static int EXPANFACTOR = 5;
 
     @Autowired
     private FastIndexLoadDataDao fastIndexLoadDataDao;
@@ -152,7 +152,7 @@ public class FastIndexService {
                 fastIndexLoadDataPo.setShardNum(es.getShard());
 
                 // 默认9200端口
-                fastIndexLoadDataPo.setPort(9200);
+                fastIndexLoadDataPo.setPort(9500);
                 fastIndexLoadDataPo.setHostName(nodeMap.get(es.getNode()).getName());
                 fastIndexLoadDataPo.setRedcueIds(StringUtils.join(shardMap.get(es.getShard()), ","));
                 fastIndexLoadDataPo.setHdfsUser(hdfsUser);

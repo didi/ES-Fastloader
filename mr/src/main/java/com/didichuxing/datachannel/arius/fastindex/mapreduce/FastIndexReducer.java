@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.didichuxing.datachannel.arius.fastindex.es.ESNode;
 import com.didichuxing.datachannel.arius.fastindex.es.ESClient;
 import com.didichuxing.datachannel.arius.fastindex.es.EsWriter;
+import com.didichuxing.datachannel.arius.fastindex.es.config.IndexConfig;
 import com.didichuxing.datachannel.arius.fastindex.remote.RemoteService;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.TaskConfig;
 import com.didichuxing.datachannel.arius.fastindex.remote.config.IndexInfo;
@@ -12,6 +13,7 @@ import com.didichuxing.datachannel.arius.fastindex.transform.TransformerFactory;
 import com.didichuxing.datachannel.arius.fastindex.utils.CommonUtils;
 import com.didichuxing.datachannel.arius.fastindex.utils.HdfsUtil;
 import com.didichuxing.datachannel.arius.fastindex.utils.LogUtils;
+import com.didichuxing.datachannel.arius.fastindex.utils.MappingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.IntWritable;
@@ -119,6 +121,12 @@ public class FastIndexReducer extends Reducer<IntWritable, DefaultHCatRecord, Nu
             // 4 force merge
             esClient.forceMerge();
 
+            JSONObject mappingJson= MappingUtils.simple(esClient.getMapping());
+            LogUtils.info("simpleMapping:" + mappingJson.toJSONString());
+            mappingJson = MappingUtils.diffMapping(new IndexConfig(indexInfo.getSetting()), mappingJson, esClient.type);
+            if (mappingJson != null) {
+                LogUtils.info("diff mapping:" + mappingJson.toJSONString());
+            }
 
             // 5 由于es内部可能存在merge操作,导致文件变动,所以先close掉node, 再去copy文件
             esNode.stop();

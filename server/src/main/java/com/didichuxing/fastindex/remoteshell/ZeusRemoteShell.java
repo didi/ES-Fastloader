@@ -14,7 +14,7 @@ import java.util.List;
 public class ZeusRemoteShell implements RemoteShell {
         private static final String TASK_STR = "{ \"tpl_id\":%d, \"account\":\"%s\", \"hosts\": [ \"%s\" ], " +
                 "\"batch\":1, \"tolerance\":0, \"pause\":\"\", \"timeout\":%d, \"args\":\"%s\", \"action\":\"start\" }";
-        private static final String user = "root";
+        private static final String user = "arius";
         private static final long zeusTemplaeId = 1246;
         /*
          * 在对应主机上执执行对应shell脚本
@@ -25,13 +25,15 @@ public class ZeusRemoteShell implements RemoteShell {
          * @timeout 执行超时时间
          * @args 脚本的参数，具体见脚本文件
          */
-        private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=xxxx";
+        private static final String START_TASK_URL_STR = "http://zeus.intra.xiaojukeji.com/api/task?token=ef0d273c39fd177ba8c6c91812654384";
         @Override
         public long startShell(String host, List<String> args) throws Exception {
+                host = host+".docker.ys";
+
                 String argsStr = StringUtils.join(args, ",,");
 
                 String jsonParam = String.format(TASK_STR, zeusTemplaeId, user, host, 1200, argsStr);
-                String resp = HttpUtil.doHttp(START_TASK_URL_STR, JSONObject.parseObject(jsonParam), null, HttpUtil.HttpType.POST);
+                String resp = HttpUtil.doHttp(START_TASK_URL_STR, null, jsonParam,  HttpUtil.HttpType.POST);
 
                 return Long.valueOf(getData(resp));
         }
