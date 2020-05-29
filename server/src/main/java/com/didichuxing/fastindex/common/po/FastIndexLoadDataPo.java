@@ -22,9 +22,9 @@ public class FastIndexLoadDataPo extends BasePo {
     private String hdfsUser;            // hdfs用户名
     private String hdfsPassword;        // hdfs密码
 
-    private String esDstDir;            // es的工作目录
+    private String esWordDir;           // es dataNode上脚本的工作目录
 
-    private long zeusTaskId;            // zeus任务id，用于获得任务执行情况
+    private long shellTaskId;           // zeus任务id，用于获得任务执行情况
     private boolean isStart;            // zeus是否已经开始执行
     private long startTime;             // zeus任务开始执行时间
     private boolean isFinish;           // zeus是否已经执行成功

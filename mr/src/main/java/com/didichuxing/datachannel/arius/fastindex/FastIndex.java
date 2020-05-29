@@ -64,8 +64,15 @@ public class FastIndex extends Configured implements Tool {
                 LogUtils.info("################ MapReduce success AND start LoadData to es node");
 
                 // mr任务完成支持，Lucene文件在taskConfig.getHdfsESOutputPath()目录中，触发数据加载任务，把数据加载到ES中
-                String ret = RemoteService.startLoadData(taskConfig.getEsTemplate(), taskConfig.getTime(), taskConfig.getHdfsESOutputPath(),
-                        indexInfo.getReducerNum(), taskConfig.getUser(), taskConfig.getPasswd());
+                String ret = RemoteService.startLoadData(
+                        taskConfig.getEsTemplate(),
+                        taskConfig.getTime(),
+                        taskConfig.getHdfsESOutputPath(),
+                        indexInfo.getReducerNum(),
+                        taskConfig.getUser(),
+                        taskConfig.getPasswd(),
+                        taskConfig.getEsWorkDir()
+                );
                 if (ret == null) {
                     throw new Exception("start load data error");
                 }

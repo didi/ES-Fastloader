@@ -15,7 +15,7 @@ public class BaseEsDao {
     protected static final Logger logger = Logger.getLogger(BaseEsDao.class.getName());
     protected static final String TYPE_NAME = "type";
 
-    private String ip = "10.179.101.31";
+    private String ip = "ecm-arius-dcdr-clientnode-sf-5838a-0.docker.ys";
     private int port = 9200;
 
     /**

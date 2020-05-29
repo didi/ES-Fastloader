@@ -147,6 +147,8 @@
 
 
     <build>
+        <finalName>fast-index-server</finalName>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>

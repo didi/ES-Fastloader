@@ -51,7 +51,7 @@ public class RemoteService {
      * 对应代码，server模块中的com.didichuxing.fastindex.controller.startLoadData()函数
      */
     private static final String START_LOAD_PATH = "fastindex/startLoadData.do";
-    public static String startLoadData(String template, long time, String hdfsDir, long reducerNum, String user, String passwd) {
+    public static String startLoadData(String template, long time, String hdfsDir, long reducerNum, String user, String passwd, String esWorkDir) {
         JSONObject param = new JSONObject();
         param.put("template", template);
         param.put("time", time);
@@ -59,6 +59,7 @@ public class RemoteService {
         param.put("hdfsDir", hdfsDir);
         param.put("hdfsUser", user);
         param.put("hdfsPasswd", passwd);
+        param.put("esWorkDir", esWorkDir);
 
         String url = String.format(URL_FORMAT_STR, HOST_STR, START_LOAD_PATH);
         LogUtils.info("send http, url:" + url + ", param:" + param.toJSONString());

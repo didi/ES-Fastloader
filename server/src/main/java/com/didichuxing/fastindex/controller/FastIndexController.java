@@ -31,9 +31,10 @@ public class FastIndexController {
                                         @RequestParam(value = "hdfsDir", required=true) String hdfsDir,
                                         @RequestParam(value = "reducerNum", required=true) int reducerNum,
                                         @RequestParam(value = "hdfsUser", required=true) String hdfsUser,
-                                        @RequestParam(value = "hdfsPasswd", required=true) String hdfsPasswd) {
+                                        @RequestParam(value = "hdfsPasswd", required=true) String hdfsPasswd,
+                                        @RequestParam(value = "esWorkDir", required=true) String esWorkDir) {
         try {
-            fastIndexService.startLoadData(template, time, hdfsDir, reducerNum, hdfsUser, hdfsPasswd);
+            fastIndexService.startLoadData(template, time, hdfsDir, reducerNum, hdfsUser, hdfsPasswd, esWorkDir);
             return new Result<>(ResultType.SUCCESS);
         } catch (Throwable t) {
             return new Result<>(ResultType.FAIL, t.getMessage());

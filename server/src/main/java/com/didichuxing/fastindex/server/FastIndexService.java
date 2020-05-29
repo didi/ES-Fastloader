@@ -94,7 +94,7 @@ public class FastIndexService {
      * @param hdfsUser hdfs用户名
      * @param hdfsPasswd hdfs密码
      */
-    public void startLoadData(String template, long time, String hdfsDir, int reducerNum, String hdfsUser, String hdfsPasswd) throws Exception {
+    public void startLoadData(String template, long time, String hdfsDir, int reducerNum, String hdfsUser, String hdfsPasswd, String esWorkDir) throws Exception {
         String indexName = getIndexName(template, time);
 
         // 判断索引是否完成
@@ -158,6 +158,7 @@ public class FastIndexService {
                 fastIndexLoadDataPo.setHdfsUser(hdfsUser);
                 fastIndexLoadDataPo.setHdfsPassword(hdfsPasswd);
                 fastIndexLoadDataPo.setHdfsSrcDir(getHdfsPath(hdfsDir));
+                fastIndexLoadDataPo.setEsWordDir(esWorkDir);
                 fastIndexLoadDataPo.setStart(false);
                 fastIndexLoadDataPo.setFinish(false);
 

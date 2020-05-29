@@ -26,7 +26,7 @@ public class SchduleService {
             public void run() {
                 while (true) {
                     try {
-//                        fastIndexLoadDataCollector.handleJobTask();
+                        fastIndexLoadDataCollector.handleJobTask();
                     } catch (Throwable t) {
                         // TODO add log
                     }
@@ -37,11 +37,11 @@ public class SchduleService {
                         // TODO add log
                     }
 
-//                    try {
-//                        Thread.sleep(60*1000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
+                    try {
+                        Thread.sleep(60*1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });

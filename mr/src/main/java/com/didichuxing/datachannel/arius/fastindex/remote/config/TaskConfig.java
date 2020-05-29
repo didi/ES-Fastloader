@@ -29,7 +29,7 @@ public class TaskConfig {
     private String hdfsOutputPath;      // reducer产生的lucene文件在hdfs上的存储路径
     private String user;                // hive用户名
     private String passwd;              // hive密码
-
+    private String esWorkDir;           // es dataNode上工作目录
 
     private String server;                // 服务端地址
     private Integer batchSize = 500;    // reducer任务中单次写入es的数据个数

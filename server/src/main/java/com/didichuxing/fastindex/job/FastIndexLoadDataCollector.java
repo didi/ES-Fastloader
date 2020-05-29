@@ -9,7 +9,7 @@ import com.didichuxing.fastindex.dao.FastIndexOpIndexDao;
 import com.didichuxing.fastindex.dao.IndexOpDao;
 import com.didichuxing.fastindex.job.limiter.CocurrentLimiter;
 import com.didichuxing.fastindex.job.limiter.ShardLimiter;
-import com.didichuxing.fastindex.utils.ZeusUtils;
+import com.didichuxing.fastindex.remoteshell.RemoteShell;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -30,6 +30,8 @@ public class FastIndexLoadDataCollector {
     @Autowired
     private IndexOpDao clusterClientPool;
 
+    @Autowired
+    private RemoteShell remoteShell;
 
     // 1.提高性能，合并单个节点的执行过程, 一个任务的带宽为50MB/s
     // 2.多次重试失败，则放弃，并告警
@@ -50,7 +52,7 @@ public class FastIndexLoadDataCollector {
         for(FastIndexLoadDataPo po : poList) {
             if(po.isStart() && !po.isFinish()) {
                 if (!isFinish(po)) {
-                    if(ZeusUtils.isDone(po.getZeusTaskId()) ||
+                    if(remoteShell.isShellDone(po.getShellTaskId()) ||
                             current-po.getStartTime() > param.getWaitTimeout()) {
                         // zeus任务已经完成，或者超时 则重试
                         po.setStart(false);
@@ -138,13 +140,13 @@ public class FastIndexLoadDataCollector {
     }
 
     private boolean isFinish(FastIndexLoadDataPo po) {
-        long taskId = po.getZeusTaskId();
+        long taskId = po.getShellTaskId();
         if(taskId<=0) {
             log.warn("wrong task id, taskId:" + taskId + ", common:" + JSON.toJSONString(po));
         }
 
         try {
-            String resp = ZeusUtils.getStdOut(taskId);
+            String resp = remoteShell.getShellOutput(taskId);
             for (String tag : successTags) {
                 if (!resp.contains(tag)) {
                     return false;
@@ -183,7 +185,7 @@ public class FastIndexLoadDataCollector {
             params.add(po.getIndexName());
             params.add(po.getIndexUUID());
             params.add("" + po.getShardNum());
-            params.add(getWorkDir(po.getIndexName(), po.getShardNum()));
+            params.add(po.getEsWordDir());
             params.add(po.getRedcueIds());
             params.add("_uid");     // 固定使用es内部的_uid;
             params.add(po.getHdfsUser());
@@ -191,7 +193,7 @@ public class FastIndexLoadDataCollector {
             params.add("" + po.getPort());
 
             // 这里需要指定对用的用户名
-            taskId = ZeusUtils.startTask(po.getHostName(),  params);
+            taskId = remoteShell.startShell(po.getHostName(),  params);
 
             if (taskId <= 0) {
                 log.warn("zeus get wrong taskId, taskId:" + taskId + ", common:" + JSON.toJSONString(po));
@@ -203,7 +205,7 @@ public class FastIndexLoadDataCollector {
             return false;
         }
 
-        po.setZeusTaskId(taskId);
+        po.setShellTaskId(taskId);
         po.setStart(true);
         po.setStartTime(System.currentTimeMillis());
         po.setRunCount(po.getRunCount()+1);
