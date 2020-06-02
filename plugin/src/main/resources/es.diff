@@ -1,0 +1,25 @@
+diff --git a/server/src/main/java/org/elasticsearch/index/engine/InternalEngine.java b/server/src/main/java/org/elasticsearch/index/engine/InternalEngine.java
+index ca3fedc989f9b1df1a3aa71ca0da7bfac4b553da..35dabc198c132f394a0c3a81b11bd94ddcc1f830 100644
+--- a/server/src/main/java/org/elasticsearch/index/engine/InternalEngine.java
++++ b/server/src/main/java/org/elasticsearch/index/engine/InternalEngine.java
+@@ -2793,4 +2793,8 @@ public class InternalEngine extends Engine {
+         final long maxSeqNo = SequenceNumbers.max(localCheckpointTracker.getMaxSeqNo(), translog.getMaxSeqNo());
+         advanceMaxSeqNoOfUpdatesOrDeletes(maxSeqNo);
+     }
++
++    public IndexWriter getIndexWriter() {
++        return indexWriter;
++    }
+ }
+diff --git a/server/src/main/java/org/elasticsearch/index/shard/IndexShard.java b/server/src/main/java/org/elasticsearch/index/shard/IndexShard.java
+index e7936e24b51dc5fdb1378f012308ab4efd96f7e5..ee6261bcc47492cc0144de365fb0a34d36a27238 100644
+--- a/server/src/main/java/org/elasticsearch/index/shard/IndexShard.java
++++ b/server/src/main/java/org/elasticsearch/index/shard/IndexShard.java
+@@ -2151,7 +2151,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
+      * NOTE: returns null if engine is not yet started (e.g. recovery phase 1, copying over index files, is still running), or if engine is
+      * closed.
+      */
+-    protected Engine getEngineOrNull() {
++    public Engine getEngineOrNull() {
+         return this.currentEngineReference.get();
+     }
