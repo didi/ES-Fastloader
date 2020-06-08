@@ -32,3 +32,6 @@ Welcome to contribute by creating issues or sending pull requests. See [Contribu
 
 # License
 ES-Fastloader is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file.
+
+# Contact us 
+<img src="imgs/wechat.png" width="78px" align="center" alt="微信交流群"/>
