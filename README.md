@@ -10,16 +10,9 @@ The ES-Fastloader uses the fault tolerance and parallelism of Hadoop and builds 
 * JDK: 8 or greater
 * ElasticSearch: 6.6.X or greater
 
-# package command
-* cd mr
-* mvn clean package -Dmaven.test.skip
-
-# Launch command
-* Launch --run in hadoop cluster
-* hadoop jar  mr-1.0.0-SNAPSHOT-with-dep.jar com.didichuxing.datachannel.arius.fastindex.FastIndex $PARAM
-
 # Developer guide
 * API document [wiki](https://github.com/didi/ES-Fastloader/wiki)
+* Develop document [wiki](https://github.com/didi/ES-Fastloader/wiki/%E4%BD%BF%E7%94%A8%E6%96%87%E6%A1%A3)
 * Read [core library source code](https://github.com/didi/ES-Fastloader/tree/1.0.0)
 * Read [main class](https://github.com/didi/ES-Fastloader/blob/1.0.0/mr/src/main/java/com/didichuxing/datachannel/arius/fastindex/FastIndex.java)
 * Read [Release notes](RELEASE-NOTES.md)
