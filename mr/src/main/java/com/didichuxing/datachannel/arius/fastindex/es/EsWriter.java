@@ -12,7 +12,7 @@ public class EsWriter {
     private Integer batchSize = 500;        // 单次写入的数据个数
     private Integer threadPoolSize = 4;     // 线程个数
     private List<ESClient.IndexNode> nodeList = new ArrayList<>();  // 当前缓存的ES数据
-    private boolean isStop = false;
+    private volatile boolean isStop = false;
     private Object lock = new Object();
     private List<Thread> threadPool = new ArrayList<>();
 
