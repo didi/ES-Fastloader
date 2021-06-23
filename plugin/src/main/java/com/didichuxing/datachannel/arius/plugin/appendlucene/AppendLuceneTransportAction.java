@@ -22,6 +22,7 @@ package com.didichuxing.datachannel.arius.plugin.appendlucene;
 import org.apache.lucene.index.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.TransportAction;
@@ -36,6 +37,9 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -73,7 +77,7 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
             // 获得shard信息
             ShardId shardId = new ShardId(request.indexName, request.uuid, request.shardId);
             IndexShard shard = indicesService.getShardOrNull(shardId);
-            if(shard==null) {
+            if (shard == null) {
                 throw new Exception("shard not found, indexName:" + request.indexName + ", shardId:" + request.shardId);
             }
 
@@ -82,16 +86,28 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
             InternalEngine engine = (InternalEngine) shard.getEngineOrNull();
             IndexWriter indexWriter = engine.getIndexWriter();
 
+            //FIXME step3 获取内部引擎中的版本管理Map，导入数据在现有es环境中需要删除版本信息，这里也可以通过修改es代码，来实现public的访问
+            Class<? extends InternalEngine> internalEngineClass = engine.getClass();
+            Field versionMapField = internalEngineClass.getDeclaredField("versionMap");
+            versionMapField.setAccessible(true);
+            Object versionMapObj = versionMapField.get(engine);
+            if (versionMapObj == null) {
+                throw new RuntimeException("获取versionMap属性值为null");
+            }
+            Class<?> versionMapClass = versionMapObj.getClass();
+            Method removeTombstoneUnderLockMethod = versionMapClass.getDeclaredMethod("removeTombstoneUnderLock", BytesRef.class);
+            removeTombstoneUnderLockMethod.setAccessible(true);
+
             // 处理主键冲突情况
             long deleteCount = -1;
             List<String> appendDirs = request.getAppendDirs();
-            if(request.primeKey!=null && request.primeKey.length()>0) {
-                deleteCount = doPrimerKey(appendDirs, indexWriter, request.primeKey);
+            if (request.primeKey != null && request.primeKey.length() > 0) {
+                deleteCount = doPrimerKey(appendDirs, indexWriter, request.primeKey, versionMapObj, removeTombstoneUnderLockMethod);
             }
 
             // 将新的lucene文件加入到shard中
             Directory[] indexes = new Directory[appendDirs.size()];
-            for(int i=0; i<appendDirs.size(); i++) {
+            for (int i = 0; i < appendDirs.size(); i++) {
                 indexes[i] = FSDirectory.open(Paths.get(appendDirs.get(i)));
             }
             indexWriter.addIndexes(indexes);
@@ -111,13 +127,14 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
      * 对比新加的lucene文件和现有shard数据是否有主键冲突的情况
      * 如果存在冲突，则删除shard数据中对应的主键数据
      */
-    public long doPrimerKey(List<String> dirs, IndexWriter dstIndexWriter, String primeKey) throws IOException {
+    public long doPrimerKey(List<String> dirs, IndexWriter dstIndexWriter, String primeKey,
+                            Object versionMapObj, Method removeTombstoneUnderLockMethod) throws IOException {
         if (dstIndexWriter.numDocs() == 0) {
             return -1;
         }
 
         long count = 0;
-        for(String appendDir : dirs) {
+        for (String appendDir : dirs) {
             IndexWriter srcIndexWriter = null;
             StandardDirectoryReader srcReader = null;
             StandardDirectoryReader dstReader = null;
@@ -142,7 +159,8 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
 
                     // 遍历单个segment中各个主键
                     while (srcTermsEnum.next() != null) {
-                        Term srcTerm = new Term(primeKey, srcTermsEnum.term());
+                        BytesRef byteId = srcTermsEnum.term();
+                        Term srcTerm = new Term(primeKey, byteId);
 
                         // 判断dst中是否存在相同的主键
                         for (LeafReaderContext dstleafReaderContext : dstReader.leaves()) {
@@ -151,12 +169,19 @@ public class AppendLuceneTransportAction extends TransportAction<AppendLuceneReq
                                 // 如果碰到相同主键，则删除dst中对应的主键
                                 dstIndexWriter.deleteDocuments(srcTerm);
                                 count++;
+                                //清除无用数据的版本信息
+                                removeTombstoneUnderLockMethod.invoke(versionMapObj, byteId);
                                 break;
                             }
+                            removeTombstoneUnderLockMethod.invoke(versionMapObj, byteId);
                         }
                     }
                 }
 
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
             } finally {
                 if (srcReader != null) {
                     srcReader.close();
